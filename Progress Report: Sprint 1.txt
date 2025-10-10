@@ -1,8 +1,0 @@
-Required Contents
-Executive Summary (4–6 bullets; ≤120 words): repo created, comms chosen, board live, 5–10 tasks queued, partner sync scheduled, and (if inherited) run verified / gaps noted.
-Communication: table with channels, usage, owners, response times, recurring meetings (with days/times).
-Repo Snapshot: screenshot of project repository and README, PR template if available.
-PM Rails Snapshot: screenshot of project board showing at least 5 items.
-(Optional) CI Snapshot: screenshot of CI setup and succesfully run even if empty.
-Inherited projects: Repo Summary table + short Run Verification (command(s) and brief evidence).
-File name: YYYY-MM-DD-[TeamID]-Sprint1-ProgressReport.pdf/md.
