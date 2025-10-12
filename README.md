@@ -7,11 +7,12 @@ Proof of concept project builing a network of AI agents capable of autonomous co
 
 **Team Roster**
 
-**Name                                Contact Information
----------------                     ------------------------**
-Payton Brafield                     bradfiep@oregonstate.edu
-Kush Patel                          patelkush@oregonstate.edu
-Lilian Le                           lelili@oregonstate.edu
-Natalia Zaitseva                    zaitsevn@oregonstate.edu
-Samuel Garcia-lopez                 garcsamu@oregonstate.edu                
-Sarah Satchell                      satchels@oregonstate.edu
+| Name                 | Contact Information           |
+|----------------------|-------------------------------|
+| Payton Brafield      | bradfiep@oregonstate.edu      |
+| Kush Patel           | patelkush@oregonstate.edu     |
+| Lilian Le            | lelili@oregonstate.edu        |
+| Natalia Zaitseva     | zaitsevn@oregonstate.edu      |
+| Samuel Garcia-Lopez  | garcsamu@oregonstate.edu      |
+| Sarah Satchell       | satchels@oregonstate.edu      |
+
