@@ -1,11 +1,9 @@
-import { useState } from 'react'
 import oregonLogo from './assets/Oregon_State_text_logo.png'
 import './App.css'
 import Header from './components/Header'
 import Button from './components/Button'
 
 function App() {
-  const [count, setCount] = useState(0)
 
   const header_actions = (
     <div>
@@ -21,18 +19,11 @@ function App() {
     <>
       <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
 
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
+      <div>
         <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
+          Middle of the page
         </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
   )
 }
