@@ -16,7 +16,7 @@ export default function Header({ title, logoSrc, logoAlt = 'logo', actions, link
         display: 'flex',
         alignItems: 'left',
         justifyContent: 'space-between',
-        width: '50vw',
+        width: '90vw',
         borderBottom: '2px solid #000000ff',
         boxSizing: 'border-box'
       }}

@@ -9,7 +9,9 @@ function App() {
 
   const header_actions = (
     <div>
-      <Button onClick={() => alert('Button clicked!')}>test button</Button>
+      <Button variant='secondary' onClick={() => alert('About Button clicked!')}>About</Button>
+      <Button variant='secondary' onClick={() => alert('Github Button clicked!')}>Github</Button>
+      <Button onClick={() => alert('Start Maze Button clicked!')}>Start Maze</Button>
     </div>
   )
 
