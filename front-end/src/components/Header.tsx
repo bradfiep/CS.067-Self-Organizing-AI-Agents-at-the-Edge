@@ -10,10 +10,21 @@ type HeaderProps = {
 
 export default function Header({ title, logoSrc, logoAlt = 'logo', actions, link }: HeaderProps) {
   return (
-    <header style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between', width: '100%' }}>
+    // make the header span the full viewport width so left/right alignments work
+    <header
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        justifyContent: 'space-between',
+        width: '100vw',
+        padding: '0.75rem 1.25rem',
+        boxSizing: 'border-box'
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         {logoSrc && (
-          <img src={logoSrc} alt={logoAlt} style={{ height: 36 }} />
+          <img src={logoSrc} alt={logoAlt} style={{ height: 36, objectFit: 'contain' }} />
         )}
         {link ? (
           <a href={link} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -24,9 +35,9 @@ export default function Header({ title, logoSrc, logoAlt = 'logo', actions, link
         )}
       </div>
 
-      <div>
+      <nav style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         {actions}
-      </div>
+      </nav>
     </header>
   )
 }
