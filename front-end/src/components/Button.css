@@ -1,0 +1,28 @@
+.button {
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.button-primary {
+  background-color: #000;
+  color: #fff;
+}
+
+.button-primary:hover {
+  background-color: #1f2937;
+}
+
+.button-secondary {
+  background-color: #fff;
+  color: #111827;
+  border: 2px solid #d1d5db;
+}
+
+.button-secondary:hover {
+  border-color: #9ca3af;
+}
