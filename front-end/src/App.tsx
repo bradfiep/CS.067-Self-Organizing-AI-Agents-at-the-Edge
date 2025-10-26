@@ -7,7 +7,7 @@ import Button from './components/Button'
 function App() {
   const [count, setCount] = useState(0)
 
-  const actions = (
+  const header_actions = (
     <div>
       <Button onClick={() => alert('Button clicked!')}>test button</Button>
     </div>
@@ -17,7 +17,7 @@ function App() {
 
   return (
     <>
-      <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={actions} />
+      <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
 
       <h1>Vite + React</h1>
       <div className="card">
