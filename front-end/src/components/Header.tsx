@@ -14,9 +14,13 @@ export default function Header({ title, logoSrc, logoAlt = 'logo', actions, link
     <header
       style={{
         display: 'flex',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        padding: '10px 20px',
         alignItems: 'left',
         justifyContent: 'space-between',
-        width: '90vw',
+        width: '100vw',
         borderBottom: '2px solid #000000ff',
         boxSizing: 'border-box'
       }}
