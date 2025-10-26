@@ -15,7 +15,7 @@ const Button: React.FC<ButtonProps> = ({
   className = '' 
 }) => {
   return (
-    <button 
+    <button style={{ margin: '5px 10px' }}
       onClick={onClick}
       className={`button button-${variant} ${className}`}
     >

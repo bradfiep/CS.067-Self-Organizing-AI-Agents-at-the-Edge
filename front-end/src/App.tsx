@@ -1,21 +1,26 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import oregonLogo from './assets/Oregon_State_text_logo.png'
 import './App.css'
+import Header from './components/Header'
+import Button from './components/Button'
 
 function App() {
   const [count, setCount] = useState(0)
 
+  const header_actions = (
+    <div>
+      <Button variant='secondary' onClick={() => alert('About Button clicked!')}>About</Button>
+      <Button variant='secondary' onClick={() => alert('Github Button clicked!')}>Github</Button>
+      <Button onClick={() => alert('Start Maze Button clicked!')}>Start Maze</Button>
+    </div>
+  )
+
+
+
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
+      <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
+
       <h1>Vite + React</h1>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
