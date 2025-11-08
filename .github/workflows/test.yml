@@ -1,0 +1,53 @@
+name: Test and Validate
+
+# Trigger this workflow on pull requests to main branch
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: front-end/package-lock.json
+
+      # Install dependencies
+      - name: Install dependencies
+        working-directory: ./front-end
+        run: npm ci
+
+      # Run linting
+      - name: Run ESLint
+        working-directory: ./front-end
+        run: npm run lint
+
+      # Build the project
+      - name: Build project
+        working-directory: ./front-end
+        run: npm run build
+
+      # Run tests (when you add them)
+      # - name: Run tests
+      #   working-directory: ./front-end
+      #   run: npm test
+
+  # Add more jobs here for back-end testing when needed
+  # test-backend:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #     # Add back-end testing steps here
