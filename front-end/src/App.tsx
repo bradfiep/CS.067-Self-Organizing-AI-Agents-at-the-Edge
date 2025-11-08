@@ -104,7 +104,7 @@ function App() {
   // Comprehensive handler to generate and validate maze from input data
   const handleGenerateMaze = () => {
     setError('');
-    let input = inputType === 'csv' ? csv.trim() : json.trim();
+    const input = inputType === 'csv' ? csv.trim() : json.trim();
     if (input === '') {
       setError(`Please enter maze data in ${inputType.toUpperCase()} format.`);
       return;
