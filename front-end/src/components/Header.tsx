@@ -1,5 +1,6 @@
 import React from 'react'
 
+// Header component with logo, title, and actions
 type HeaderProps = {
   title: string
   logoSrc?: string
@@ -18,11 +19,14 @@ export default function Header({ title, logoSrc, logoAlt = 'logo', actions, link
         top: 0,
         left: 0,
         padding: '10px 20px',
-        alignItems: 'left',
+        alignItems: 'center',
         justifyContent: 'space-between',
         width: '100vw',
         borderBottom: '2px solid #000000ff',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        background: '#ffffffff',
+        color: '#222',
+        zIndex: 1000
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
