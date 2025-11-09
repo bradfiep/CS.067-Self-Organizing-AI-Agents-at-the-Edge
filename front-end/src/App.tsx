@@ -1,7 +1,5 @@
-
-import { useState } from 'react';
+import { useState, useEffect, useRef } from "react";
 import MazeKey from './components/MazeKey';
-
 import oregonLogo from './assets/Oregon_State_text_logo.png';
 import './App.css';
 import Header from './components/Header';
@@ -91,6 +89,34 @@ function App() {
   const [startPt, setStartPt] = useState<[number, number]>([0, 0]);
   const [endPt, setEndPt] = useState<[number, number]>([0, 0]);
   const [error, setError] = useState('');
+
+  const ws = useRef<WebSocket | null>(null);
+  const wsUrl = import.meta.env.VITE_WEBSOCKET_URL;
+
+  useEffect(() => {
+    ws.current = new WebSocket(wsUrl)
+    ws.current.onopen = () => console.log("WebSocket connected");
+    ws.current.onclose = () => console.log("WebSocket disconnected");
+    ws.current.onerror = (err) => console.error("WebSocket error", err);
+
+    return () => {
+      ws.current?.close();
+    };
+  }, [wsUrl]);
+
+  // Function to send maze via WebSocket
+  const handleSendMaze = () => {
+    if (!maze || !ws.current || ws.current.readyState !== WebSocket.OPEN) return;
+
+    const payload = {
+        maze,
+        start: startPt,
+        end: endPt
+    };
+
+    ws.current.send(JSON.stringify(payload));
+    console.log("Maze sent via WebSocket");
+  };
 
   // Header actions component
   const header_actions = (
@@ -254,7 +280,7 @@ function App() {
                         <MazeGrid maze={maze} start={startPt} end={endPt} />
                         {/* Run Maze button appears only when maze is generated */}
                         <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '1.5em' }}>
-                          <Button variant="primary">Run Maze</Button>
+                          <Button variant="primary" onClick={handleSendMaze}>Run Maze</Button>
                         </div>
                       </>
                     ) : (
