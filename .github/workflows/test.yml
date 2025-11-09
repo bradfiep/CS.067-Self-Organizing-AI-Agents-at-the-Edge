@@ -1,6 +1,13 @@
 name: Test and Validate
 
-# Trigger this workflow on pull requests to main branch
+# Trigger this workflow on pull r          if awk "BEGIN {exit !($COVERAGE_NUM > 0)}"; then
+            echo "✅ Coverage check passed: $COVERAGE_NUM% > 0%"
+          else
+            echo "❌ Coverage check failed: $COVERAGE_NUM% is not greater than 0%"
+            exit 1
+          fi
+
+  # Add more jobs here for back-end testing when neededs to main branch
 on:
   pull_request:
     branches: [main]
@@ -39,12 +46,29 @@ jobs:
         working-directory: ./front-end
         run: npm run build
 
-      # Run tests (when you add them)
-      # - name: Run tests
-      #   working-directory: ./front-end
-      #   run: npm test
+      # Run tests with coverage
+      - name: Run tests with coverage
+        working-directory: ./front-end
+        run: npm test -- --coverage
 
-  # Add more jobs here for back-end testing when needed
+      # Check test coverage percentage
+      - name: Check coverage percentage
+        working-directory: ./front-end
+        run: |
+          # Extract coverage percentage from the text output
+          COVERAGE=$(npm test -- --coverage --run 2>&1 | grep "All files" | awk '{print $4}' | head -1)
+          echo "Coverage percentage found: $COVERAGE%"
+
+          # Remove % sign if present and check if it's a number
+          COVERAGE_NUM=$(echo $COVERAGE | sed 's/%//g')
+
+          # Check if coverage is greater than 0 using awk for floating point comparison
+          if awk "BEGIN {exit !($COVERAGE_NUM > 0)}"; then
+            echo "Coverage check passed: $COVERAGE_NUM% > 0%"
+          else
+            echo "Coverage check failed: $COVERAGE_NUM% is not greater than 0%"
+            exit 1
+          fi  # Add more jobs here for back-end testing when needed
   # test-backend:
   #   runs-on: ubuntu-latest
   #   steps:
