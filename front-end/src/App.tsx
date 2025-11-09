@@ -94,10 +94,23 @@ function App() {
   const wsUrl = import.meta.env.VITE_WEBSOCKET_URL;
 
   useEffect(() => {
-    ws.current = new WebSocket(wsUrl)
-    ws.current.onopen = () => console.log("WebSocket connected");
-    ws.current.onclose = () => console.log("WebSocket disconnected");
-    ws.current.onerror = (err) => console.error("WebSocket error", err);
+    // Only initialize WebSocket if running in a browser-like environment,
+    // a WebSocket implementation exists, and a URL is provided.
+    if (typeof window === 'undefined' || typeof WebSocket === 'undefined' || !wsUrl) {
+      ws.current = null;
+      return;
+    }
+
+    try {
+      ws.current = new WebSocket(wsUrl);
+      ws.current.onopen = () => console.log("WebSocket connected");
+      ws.current.onclose = () => console.log("WebSocket disconnected");
+      ws.current.onerror = (err) => console.error("WebSocket error", err);
+    } catch (err) {
+      // Log and swallow errors to avoid unhandled exceptions during tests
+      console.error("Failed to create WebSocket:", err);
+      ws.current = null;
+    }
 
     return () => {
       ws.current?.close();
