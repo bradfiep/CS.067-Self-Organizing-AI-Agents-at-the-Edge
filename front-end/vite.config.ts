@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // @ts-ignore
+  // @ts-expect-error test configuration is not part of the standard vite config type
   test: {
     globals: true,
     environment: 'jsdom',

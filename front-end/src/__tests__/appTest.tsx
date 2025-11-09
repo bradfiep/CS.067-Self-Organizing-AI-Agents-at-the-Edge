@@ -6,11 +6,14 @@ import App from '../App';
 Object.defineProperty(window, 'WebSocket', {
   writable: true,
   value: class MockWebSocket {
-    constructor(_url: string) {
+    constructor(url: string) {
+      // Store url if needed for future use
+      this.url = url;
       setTimeout(() => {
         if (this.onopen) this.onopen({} as Event);
       }, 0);
     }
+    url: string;
     onopen: ((event: Event) => void) | null = null;
     onclose: ((event: CloseEvent) => void) | null = null;
     onerror: ((event: Event) => void) | null = null;
