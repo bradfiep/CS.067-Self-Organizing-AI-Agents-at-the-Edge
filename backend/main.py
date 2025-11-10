@@ -8,7 +8,7 @@ import websockets
 connected_clients = set()
 
 
-async def handler(websocket, path):
+async def handler(websocket):
     connected_clients.add(websocket)
     print("New client connected")
 
