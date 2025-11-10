@@ -1,7 +1,7 @@
 #Node class: creates a node that can 
 #both listen and send messages
-
 import socket
+import asyncio
 
 class Node:
     def __init__(self, port, name):
@@ -12,7 +12,15 @@ class Node:
         print(f"{self.name} listening on port {port}")
         self.on_message = lambda msg, addr: None
 
-    def node_listen(portnumber):
+    async def web_listen(self):
+        loop = asyncio.get_event_loop()
+        while True:
+            data, addr = await loop.run_in_executor(None, self.sock.recvfrom, 1024)
+            msg = data.decode('utf-8')
+            print(f"[{self.name}] Received: {msg} from {addr}")
+            self.on_message(msg, addr)
+
+    def node_listen(self, portnumber):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.bind(("", portnumber))
@@ -36,24 +44,23 @@ class Node:
         except socket.error as err:
             print(f"Failed to receive data: {err}")
             return None, None
+ 
+# def main():
+#     node1_sock = Node.node_listen(5000)
+#     node2_sock = Node.node_listen(5001)
 
+#     print("\n[Mock] Webpage -> Node1")
+#     Node.send_data(node1_sock, "127.0.0.1", 5000, "Meow")
 
-def main():
-    node1_sock = Node.node_listen(5000)
-    node2_sock = Node.node_listen(5001)
+#     msg1, addr1 = Node.receive_data(node1_sock)
+#     if msg1:
+#         print(f"Node1 processed message: {msg1}")
+#         print("Node1 Forwarding to Node2...")
+#         Node.send_data(node1_sock, "127.0.0.1", 5001, msg1)
 
-    print("\n[Mock] Webpage -> Node1")
-    Node.send_data(node1_sock, "127.0.0.1", 5000, "Meow")
+#     msg2, addr2 = Node.receive_data(node2_sock)
+#     if msg2:
+#         print(f"Node2 final received message: {msg2}")
 
-    msg1, addr1 = Node.receive_data(node1_sock)
-    if msg1:
-        print(f"Node1 processed message: {msg1}")
-        print("Node1 Forwarding to Node2...")
-        Node.send_data(node1_sock, "127.0.0.1", 5001, msg1)
-
-    msg2, addr2 = Node.receive_data(node2_sock)
-    if msg2:
-        print(f"Node2 final received message: {msg2}")
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
