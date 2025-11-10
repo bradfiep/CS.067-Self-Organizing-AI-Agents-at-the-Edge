@@ -45,22 +45,22 @@ class Node:
             print(f"Failed to receive data: {err}")
             return None, None
  
-# def main():
-#     node1_sock = Node.node_listen(5000)
-#     node2_sock = Node.node_listen(5001)
+def main():
+    node1_sock = Node.node_listen(5000)
+    node2_sock = Node.node_listen(5001)
 
-#     print("\n[Mock] Webpage -> Node1")
-#     Node.send_data(node1_sock, "127.0.0.1", 5000, "Meow")
+    print("\n[Mock] Webpage -> Node1")
+    Node.send_data(node1_sock, "127.0.0.1", 5000, "Meow")
 
-#     msg1, addr1 = Node.receive_data(node1_sock)
-#     if msg1:
-#         print(f"Node1 processed message: {msg1}")
-#         print("Node1 Forwarding to Node2...")
-#         Node.send_data(node1_sock, "127.0.0.1", 5001, msg1)
+    msg1, addr1 = Node.receive_data(node1_sock)
+    if msg1:
+        print(f"Node1 processed message: {msg1}")
+        print("Node1 Forwarding to Node2...")
+        Node.send_data(node1_sock, "127.0.0.1", 5001, msg1)
 
-#     msg2, addr2 = Node.receive_data(node2_sock)
-#     if msg2:
-#         print(f"Node2 final received message: {msg2}")
+    msg2, addr2 = Node.receive_data(node2_sock)
+    if msg2:
+        print(f"Node2 final received message: {msg2}")
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
