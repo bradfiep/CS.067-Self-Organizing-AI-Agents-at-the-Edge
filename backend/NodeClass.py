@@ -44,6 +44,10 @@ class Node:
         except socket.error as err:
             print(f"Failed to receive data: {err}")
             return None, None
+
+    def save_message(self, msg, filename="received_messages.txt"):
+        with open(filename, "a") as f:
+            f.write(f"{msg}\n")
  
 def main():
     node1_sock = Node.node_listen(5000)
