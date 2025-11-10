@@ -34,15 +34,22 @@ jobs:
         working-directory: ./front-end
         run: npm run lint
 
+      # Run tests with coverage
+      - name: Run tests with coverage
+        working-directory: ./front-end
+        run: npm run test:coverage
+
       # Build the project
       - name: Build project
         working-directory: ./front-end
         run: npm run build
 
-      # Run tests (when you add them)
-      # - name: Run tests
-      #   working-directory: ./front-end
-      #   run: npm test
+      # Upload coverage reports (optional - for viewing coverage results)
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: front-end/coverage/
 
   # Add more jobs here for back-end testing when needed
   # test-backend:
