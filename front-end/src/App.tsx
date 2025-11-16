@@ -130,7 +130,12 @@ function App() {
   // Comprehensive handler to generate and validate maze from input data
   const handleGenerateMaze = () => {
     setError('');
+    const MAX_INPUT_SIZE = 1000000; // 1MB of text
     const input = inputType === 'csv' ? csv.trim() : json.trim();
+    if (input.length > MAX_INPUT_SIZE) {
+      setError('Input too large. Maximum 1MB of maze data allowed.');
+      return;
+    }
     if (input === '') {
       setError(`Please enter maze data in ${inputType.toUpperCase()} format.`);
       return;
@@ -173,6 +178,11 @@ function App() {
     }
     if (startPtTemp[0] === endPtTemp[0] && startPtTemp[1] === endPtTemp[1]) {
       setError('Start and end points cannot be the same.');
+      return;
+    }
+    // Prevent start/end points from being on a wall
+    if (m[startPtTemp[0]][startPtTemp[1]] === 1 || m[endPtTemp[0]][endPtTemp[1]] === 1) {
+      setError("Start and end points can't be on walls (1).");
       return;
     }
     setMaze(m);
