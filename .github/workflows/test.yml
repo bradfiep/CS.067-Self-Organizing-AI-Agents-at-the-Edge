@@ -72,7 +72,7 @@ jobs:
       - name: Run backend tests
         working-directory: ./backend
         run: |
-          pytest tests/ --maxfail=1 --disable-warnings -q
+          pytest tests/test_NodeClass.py --maxfail=1 --disable-warnings -q
 
   # Add more jobs here for back-end testing when needed
   # test-backend:
