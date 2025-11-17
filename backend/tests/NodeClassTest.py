@@ -1,6 +1,10 @@
 import socket
 import pytest
 
+import io
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from NodeClass import Node
 
 
@@ -16,6 +20,7 @@ def test_node_init_prints_listening(capsys):
     try:
         node.sock.close()
     except Exception:
+        print(f"Could not close TestNode socket")
         pass
 
 
@@ -33,8 +38,10 @@ def test_node_listen_prints_socket_bound(capsys):
     try:
         sock.close()
     except Exception:
+        print(f"Could not close socket bound to port 0")
         pass
     try:
         node.sock.close()
     except Exception:
+        print(f"Could not close TmpNode socket")
         pass
