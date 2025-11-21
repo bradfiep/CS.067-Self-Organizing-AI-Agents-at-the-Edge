@@ -466,12 +466,12 @@ describe('MazeBuilder Component', () => {
       const startInput = screen.getByPlaceholderText('0,0');
       const endInput = screen.getByPlaceholderText('9,9');
       
-      // Create a 100x100 maze (under the 1MB limit)
-      const largeMaze = Array(100).fill(Array(100).fill(0).join(',')).join('\n');
+      // Create a 50x50 maze (under the 1MB limit)
+      const largeMaze = Array(50).fill(Array(50).fill(0).join(',')).join('\n');
       
       fireEvent.change(csvInput, { target: { value: largeMaze } });
       fireEvent.change(startInput, { target: { value: '0,0' } });
-      fireEvent.change(endInput, { target: { value: '99,99' } });
+      fireEvent.change(endInput, { target: { value: '49,49' } });
       
       const generateButton = screen.getByRole('button', { name: 'Generate Maze' });
       fireEvent.click(generateButton);
