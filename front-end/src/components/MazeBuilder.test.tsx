@@ -3,8 +3,8 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import MazeBuilder from './MazeBuilder';
 
 describe('MazeBuilder Component', () => {
-  let mockOnBack: ReturnType<typeof vi.fn>;
-  let mockOnSendMaze: ReturnType<typeof vi.fn>;
+  let mockOnBack: () => void;
+  let mockOnSendMaze: (maze: number[][], start: [number, number], end: [number, number]) => void;
 
   beforeEach(() => {
     mockOnBack = vi.fn();
