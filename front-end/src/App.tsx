@@ -106,7 +106,10 @@ function App() {
 
   // Function to send maze via WebSocket
   const handleSendMaze = () => {
-    if (!maze || !ws.current || ws.current.readyState !== WebSocket.OPEN) return;
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      setError("WebSocket is not connected. Please check connection.");
+      return;
+    }
 
     const payload = {
         maze,
@@ -116,6 +119,7 @@ function App() {
 
     ws.current.send(JSON.stringify(payload));
     console.log("Maze sent via WebSocket");
+    setError('');
   };
 
   // Header actions component
@@ -226,6 +230,7 @@ function App() {
         <div className="builder-section">
           <div className="builder-section-inner">
             <h1 className="builder-title">Maze Builder</h1>
+              {error && <div className="error-message">{error}</div>}
             <div className="builder-content">
               {/* Left side: Maze setup and input */}
               <div className="maze-setup">
@@ -277,7 +282,6 @@ function App() {
                     <div className="generate-btn-container">
                       <Button variant="primary" onClick={handleGenerateMaze}>Generate Maze</Button>
                     </div>
-                    {error && <div className="error-message">{error}</div>}
                   </div>
                 </div>
               </div>
