@@ -7,6 +7,8 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from NodeClass import Node
 
+#NEEDS MODIFICATION TO HANDLE BROADCASTS AND NEW MULTIFACITED NODE_LISTEN METHOD
+
 
 def test_node_init_prints_listening(capsys):
     """Creating a Node should print a listening message to stdout."""
