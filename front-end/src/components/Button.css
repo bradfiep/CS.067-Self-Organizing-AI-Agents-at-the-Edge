@@ -1,3 +1,56 @@
+/* Export dropdown/button group styling */
+.export-btn-group {
+  margin-top: 1em;
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+  align-items: center;
+}
+
+.export-dropdown {
+  font-size: 1rem;
+  padding: 0.5rem 2.5rem 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+  appearance: none;
+  box-shadow: none;
+  min-width: 150px;
+}
+
+.export-dropdown-arrow {
+  position: absolute;
+  right: 1rem;
+  pointer-events: none;
+  font-size: 1.2em;
+  color: #888;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.button-run-maze {
+  background: linear-gradient(180deg, #212020 0%, #111010 100%);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  box-shadow: 0 0 16px 2px #e1c9e280;
+  border: none;
+  animation: pulse-run-maze 1.5s infinite;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.button-run-maze:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 32px 8px #e1c9e2cc;
+}
+
+@keyframes pulse-run-maze {
+  0%, 100% { box-shadow: 0 0 10px 2px #394a62; }
+  50% { box-shadow: 0 0 16px 8px #465770; }
+}
 .button {
   padding: 0.5rem 1.5rem;
   border-radius: 0.5rem;
