@@ -3,11 +3,19 @@ import Button from './Button';
 import MazeKey from './MazeKey';
 
 // Utility functions for parsing maze data from CSV and JSON formats
-function parseMazeCSV(csv: string): number[][] {
-  return csv
-    .trim()
-    .split(/\r?\n/)
-    .map(row => row.split(',').map(cell => parseInt(cell, 10)));
+// Parses CSV with optional start/end points in first two lines
+function parseMazeCSV(csv: string): { maze: number[][], start?: [number, number], end?: [number, number] } {
+  const lines = csv.trim().split(/\r?\n/);
+  let start: [number, number] | undefined;
+  let end: [number, number] | undefined;
+  let mazeLines: string[] = lines;
+  if (lines.length > 2 && lines[0].match(/^\d+,\d+$/) && lines[1].match(/^\d+,\d+$/)) {
+    start = lines[0].split(',').map(Number) as [number, number];
+    end = lines[1].split(',').map(Number) as [number, number];
+    mazeLines = lines.slice(2);
+  }
+  const maze = mazeLines.map(row => row.split(',').map(cell => parseInt(cell, 10)));
+  return { maze, start, end };
 }
 
 function parseMazeJSON(json: string): number[][] {
@@ -79,6 +87,32 @@ interface MazeBuilderProps {
 }
 
 function MazeBuilder({ onBack, onSendMaze, wsConnected }: MazeBuilderProps) {
+  const [exportType, setExportType] = useState<'csv' | 'json'>('csv');
+
+  // Export maze as CSV or JSON
+  const handleExportMaze = () => {
+    if (!maze) return;
+    let dataStr = '';
+    let filename = '';
+    if (exportType === 'csv') {
+      // CSV: start, end, then maze rows
+      dataStr = `${startPt[0]},${startPt[1]}\n${endPt[0]},${endPt[1]}\n` + maze.map(row => row.join(',')).join('\n');
+      filename = 'maze.csv';
+    } else {
+      // JSON: {start, end, maze}
+      dataStr = JSON.stringify({ start: startPt, end: endPt, maze }, null, 2);
+      filename = 'maze.json';
+    }
+    const blob = new Blob([dataStr], { type: exportType === 'csv' ? 'text/csv' : 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   const [inputType, setInputType] = useState<'csv' | 'json'>('csv');
   const [csv, setCsv] = useState('');
   const [json, setJson] = useState('');
@@ -111,17 +145,33 @@ function MazeBuilder({ onBack, onSendMaze, wsConnected }: MazeBuilderProps) {
       return;
     }
     let m: number[][] = [];
+    let s: number[] = [];
+    let e: number[] = [];
     if (inputType === 'csv') {
-      m = parseMazeCSV(csv);
+      const parsed = parseMazeCSV(csv);
+      m = parsed.maze;
+      // If start/end found in CSV, use them
+      if (parsed.start) {
+        setStart(parsed.start.join(','));
+        s = parsed.start;
+      } else {
+        s = start.split(',').map(Number);
+      }
+      if (parsed.end) {
+        setEnd(parsed.end.join(','));
+        e = parsed.end;
+      } else {
+        e = end.split(',').map(Number);
+      }
     } else {
       m = parseMazeJSON(json);
+      s = start.split(',').map(Number);
+      e = end.split(',').map(Number);
     }
     if (m.length === 0) {
       setError('Invalid maze data. Please check the format.');
       return;
     }
-    const s = start.split(',').map(Number);
-    const e = end.split(',').map(Number);
     if (s.length !== 2 || e.length !== 2 || s.some(isNaN) || e.some(isNaN)) {
       setError('Invalid start or end points. Use format like 0,0');
       return;
@@ -173,6 +223,10 @@ function MazeBuilder({ onBack, onSendMaze, wsConnected }: MazeBuilderProps) {
       const text = event.target?.result as string;
       if (inputType === 'csv') {
         setCsv(text);
+        // Try to auto-fill start/end if present
+        const parsed = parseMazeCSV(text);
+        if (parsed.start) setStart(parsed.start.join(','));
+        if (parsed.end) setEnd(parsed.end.join(','));
       } else {
         setJson(text);
       }
@@ -217,7 +271,13 @@ function MazeBuilder({ onBack, onSendMaze, wsConnected }: MazeBuilderProps) {
                       rows={6}
                       placeholder="0,1,0,0,0,1,0,0,0,0\n..."
                       value={csv}
-                      onChange={e => setCsv(e.target.value)}
+                      onChange={e => {
+                        setCsv(e.target.value);
+                        // Auto-fill start/end if present
+                        const parsed = parseMazeCSV(e.target.value);
+                        if (parsed.start) setStart(parsed.start.join(','));
+                        if (parsed.end) setEnd(parsed.end.join(','));
+                      }}
                     />
                   ) : (
                     <textarea
@@ -257,9 +317,23 @@ function MazeBuilder({ onBack, onSendMaze, wsConnected }: MazeBuilderProps) {
               {maze ? (
                 <>
                   <MazeGrid maze={maze} start={startPt} end={endPt} />
-                  {/* Run Maze button appears only when maze is generated */}
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '1.5em' }}>
-                    <Button variant="primary" onClick={handleSendMaze}>Run Maze</Button>
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1.5em' }}>
+                    <Button className="button-run-maze" onClick={handleSendMaze}>Run Maze</Button>
+                    <div className="export-btn-group">
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <select
+                          className="export-dropdown"
+                          value={exportType}
+                          onChange={e => setExportType(e.target.value as 'csv' | 'json')}
+                        >
+                          <option value="csv">Export as CSV</option>
+                          <option value="json">Export as JSON</option>
+                        </select>
+                        {/* Custom dropdown arrow */}
+                        <span className="export-dropdown-arrow">▼</span>
+                      </div>
+                      <Button variant="primary" onClick={handleExportMaze}>Export Maze</Button>
+                    </div>
                   </div>
                 </>
               ) : (
