@@ -84,14 +84,14 @@ interface MazeBuilderProps {
   onBack: () => void;
   onSendMaze: (maze: number[][], start: [number, number], end: [number, number]) => void;
   wsConnected: boolean;
-  backendMessage: string | null;
+  backendMessage?: string | null;
 }
 
 function MazeBuilder({
   onBack,
   onSendMaze,
   wsConnected,
-  backendMessage
+  backendMessage = null
 }: MazeBuilderProps) {
   const [exportType, setExportType] = useState<'csv' | 'json'>('csv');
 
