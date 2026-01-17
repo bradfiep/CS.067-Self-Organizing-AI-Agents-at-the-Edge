@@ -1,17 +1,27 @@
+import json
 import asyncio
 from NodeClass import Node
 
-# Create Node2 that listens on port 9002
 node = Node(9002, "Node2")
 
 def handle_message(msg, addr):
     print(f"[{node.name}] Received from {addr}: {msg}")
 
-    # Save the received message to file using class function
+    # Save as before
     node.save_message(msg, "node2_messages.txt")
-    print(f"[{node.name}] Saved message to node2_messages.txt")
+
+    # 🔁 SEND MAZE BACK TO PYTHON
+    response = {
+        "type": "maze_update",
+        "source": node.name,
+        "payload": msg
+    }
+
+    node.sock.sendto(
+        json.dumps(response).encode("utf-8"),
+        ("127.0.0.1", 9000)  # Python Node port
+    )
 
 node.on_message = handle_message
 
-# Run the listener forever
 asyncio.run(node.web_listen())
