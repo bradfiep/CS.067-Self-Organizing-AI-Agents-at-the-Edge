@@ -92,6 +92,7 @@ function App() {
 
   const ws = useRef<WebSocket | null>(null);
   const wsUrl = import.meta.env.VITE_WEBSOCKET_URL;
+  const [backendMessage, setBackendMessage] = useState<string | null>(null);
 
   useEffect(() => {
     ws.current = new WebSocket(wsUrl)
@@ -103,6 +104,32 @@ function App() {
       ws.current?.close();
     };
   }, [wsUrl]);
+
+  useEffect(() => {
+    ws.current = new WebSocket(wsUrl);
+  
+    ws.current.onopen = () => console.log("WebSocket connected");
+    ws.current.onclose = () => console.log("WebSocket disconnected");
+    ws.current.onerror = (err) => console.error("WebSocket error", err);
+  
+    //RECEIVE FROM PYTHON / NODE
+    ws.current.onmessage = (event) => {
+      console.log("Received from backend:", event.data);
+  
+      try {
+        const data = JSON.parse(event.data);
+        setBackendMessage(JSON.stringify(data, null, 2));
+      } catch {
+        // If Node sent a plain string
+        setBackendMessage(event.data);
+      }
+    };
+  
+    return () => {
+      ws.current?.close();
+    };
+  }, [wsUrl]);
+  
 
   // Function to send maze via WebSocket
   const handleSendMaze = () => {
@@ -283,20 +310,48 @@ function App() {
               </div>
               {/* Right side: Maze preview */}
               <div className="maze-preview-container">
-                <div className="maze-data">
-                  <h3 className="maze-data-title">Maze Preview</h3>
-                    {maze ? (
-                      <>
-                        <MazeGrid maze={maze} start={startPt} end={endPt} />
-                        {/* Run Maze button appears only when maze is generated */}
-                        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '1.5em' }}>
-                          <Button variant="primary" onClick={handleSendMaze}>Run Maze</Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="maze-placeholder">Enter maze data and points, then click Generate Maze.</div>
+              <div className="maze-data">
+                <h3 className="maze-data-title">Maze Preview</h3>
+
+                {maze ? (
+                  <>
+                    <MazeGrid maze={maze} start={startPt} end={endPt} />
+
+                    <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '1.5em' }}>
+                      <Button variant="primary" onClick={handleSendMaze}>
+                        Run Maze
+                      </Button>
+                    </div>
+
+                    {/* 👇👇👇 MESSAGE FROM NODE GOES HERE 👇👇👇 */}
+                    {backendMessage && (
+                      <div
+                        style={{
+                          marginTop: "1rem",
+                          padding: "0.75rem",
+                          background: "#111",
+                          color: "#0f0",
+                          fontFamily: "monospace",
+                          fontSize: "0.85rem",
+                          borderRadius: "6px",
+                          maxHeight: "200px",
+                          overflowY: "auto"
+                        }}
+                      >
+                        <b>Solved maze:</b>
+                        <pre>{backendMessage}</pre>
+                      </div>
                     )}
-                </div>
+                    {/* 👆👆👆 END MESSAGE BLOCK 👆👆👆 */}
+
+                  </>
+                ) : (
+                  <div className="maze-placeholder">
+                    Enter maze data and points, then click Generate Maze.
+                  </div>
+                )}
+              </div>
+
                 {maze && (
                   <MazeKeyHover />
                 )}

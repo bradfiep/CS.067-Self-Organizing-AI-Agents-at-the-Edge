@@ -41,6 +41,8 @@ def on_udp_message(msg, addr):
         broadcast(msg), asyncio.get_event_loop()
     )
 
+node.on_message = on_udp_message
+
 async def broadcast(message):
     if connected_clients:
         msg_str = json.dumps(message)
@@ -50,7 +52,7 @@ async def broadcast(message):
 async def main():
     ws_server = await websockets.serve(handler, "0.0.0.0", 8080)
     udp_listener = asyncio.create_task(node.web_listen())
-    print("🚀 WebSocket server running on ws://localhost:8080")
+    print("WebSocket server running on ws://localhost:8080")
     await asyncio.gather(ws_server.wait_closed(), udp_listener)
 
 if __name__ == "__main__":
