@@ -7,10 +7,48 @@ class Node:
     def __init__(self, port, name):
         self.port = port
         self.name = name
+        #saved list of visited rows, col
+        self.visited = set()
+        #dfs path uses path as a stack to search maze
+        self.StackPath = []
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("", port))
         print(f"{self.name} listening on port {port}")
         self.on_message = lambda msg, addr: None
+
+
+
+    #use simple stack for depth first search exploration
+
+    def dfs (self, row, col, maze, endpoint):
+        if(row < 0 or row >=  len(maze) or
+            col < 0 or col >=  len(maze) or 
+            maze[row][col] == 1):
+            return False 
+        #add current location to visited and StackPath
+
+        self.visited.add (row, col)
+        self.StackPath.append (row, col)
+
+        for row_direction, col_direction in [(-1, 0), (1,0), (0,-1), (0,1)]:
+            #recursive call to search diretions for endpoint
+            if self.dfs(row + row_direction, col + col_direction, maze, endpoint):
+                #if any of the directions are true return true
+                return True 
+        
+        #if still in function reached dead end so
+        self.StackPath.pop()
+        return False
+    
+        def printdfs(self, row, col, maze, endpoint):
+            if self.dfs(row, col, maze, endpoint):
+                print('nodes visited: ', self.visited, 'path: ', self.StackPath)
+            else:
+                print('error')   
+                
+
+
+    #messaging functions
 
     async def web_listen(self):
         loop = asyncio.get_event_loop()
