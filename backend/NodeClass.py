@@ -2,6 +2,7 @@
 #both listen and send messages
 import socket
 import asyncio
+from collections import deque
 
 class Node:
     def __init__(self, port, name):
@@ -45,8 +46,32 @@ class Node:
                 print('nodes visited: ', self.visited, 'path: ', self.StackPath)
             else:
                 print('error')   
-                
 
+    
+    def bfs (self, start, maze, endpoint):
+        rows, cols = len(maze), len(maze[0])
+        queue = deque()
+        queue.append((start, [start]))
+        self.visited = set()
+        while queue:
+            (row, col), path = queue.popleft()
+            if (row, col) in self.visited:
+                continue
+            self.visited.add((row, col))
+            #means goal reached
+            if (row, col) == endpoint:
+                self.StackPath = path
+                return True
+            for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
+                nr, nc = row + dr, col + dc
+                if (
+                    0 <= nr < rows and
+                    0 <= nc < cols and
+                    maze[nr][nc] == 0 and
+                    (nr, nc) not in self.visited
+                ):
+                    queue.append(((nr, nc), path + [(nr, nc)]))
+        return False
 
     #messaging functions
 
@@ -88,21 +113,37 @@ class Node:
             f.write(f"{msg}\n")
  
 def main():
-    node1_sock = Node.node_listen(5000)
-    node2_sock = Node.node_listen(5001)
+    maze = [
+        [0, 1, 0, 0, 0],
+        [0, 1, 0, 1, 0],
+        [0, 0, 0, 1, 0],
+        [1, 1, 0, 0, 0],
+        [0, 0, 0, 1, 0]
+    ]
 
-    print("\n[Mock] Webpage -> Node1")
-    Node.send_data(node1_sock, "127.0.0.1", 5000, "Meow")
+    start = (0, 0)
+    end = (4, 4)
 
-    msg1, addr1 = Node.receive_data(node1_sock)
-    if msg1:
-        print(f"Node1 processed message: {msg1}")
-        print("Node1 Forwarding to Node2...")
-        Node.send_data(node1_sock, "127.0.0.1", 5001, msg1)
+    node = Node(port=0, name="TestNode")
 
-    msg2, addr2 = Node.receive_data(node2_sock)
-    if msg2:
-        print(f"Node2 final received message: {msg2}")
+    # print("\n--- DFS TEST ---")
+    # node.visited.clear()
+    # node.StackPath.clear()
+    # if node.dfs(start[0], start[1], maze, end):
+    #     print("DFS path found:")
+    #     print(node.StackPath)
+    # else:
+    #     print("DFS failed")
+
+    print("\n--- BFS TEST ---")
+    node.visited.clear()
+    node.StackPath.clear()
+    if node.bfs(start, maze, end):
+        print("BFS shortest path found:")
+        print(node.StackPath)
+    else:
+        print("BFS failed")
+
 
 if __name__ == "__main__":
     main()
