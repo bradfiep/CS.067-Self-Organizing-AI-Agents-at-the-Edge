@@ -9,6 +9,8 @@ import mazeImg from './assets/maze.png';
 function App() {
   // State management for the application
   const [showBuilder, setShowBuilder] = useState(false);
+  const [backendMessage, setBackendMessage] = useState<string | null>(null);
+
 
   const ws = useRef<WebSocket | null>(null);
   const wsUrl = import.meta.env.VITE_WEBSOCKET_URL;
@@ -23,6 +25,30 @@ function App() {
       ws.current?.close();
     };
   }, [wsUrl]);
+
+  useEffect(() => {
+    ws.current = new WebSocket(wsUrl);
+  
+    ws.current.onopen = () => console.log("WebSocket connected");
+    ws.current.onclose = () => console.log("WebSocket disconnected");
+    ws.current.onerror = (err) => console.error("WebSocket error", err);
+  
+    ws.current.onmessage = (event) => {
+      console.log("Received from backend:", event.data);
+  
+      try {
+        const parsed = JSON.parse(event.data);
+        setBackendMessage(JSON.stringify(parsed, null, 2));
+      } catch {
+        setBackendMessage(event.data);
+      }
+    };
+  
+    return () => {
+      ws.current?.close();
+    };
+  }, [wsUrl]);
+  
 
   // Function to send maze via WebSocket
   const handleSendMaze = (maze: number[][], start: [number, number], end: [number, number]) => {
@@ -59,6 +85,7 @@ function App() {
           onBack={() => setShowBuilder(false)}
           onSendMaze={handleSendMaze}
           wsConnected={ws.current?.readyState === WebSocket.OPEN}
+          backendMessage={backendMessage}
         />
       </>
     );
