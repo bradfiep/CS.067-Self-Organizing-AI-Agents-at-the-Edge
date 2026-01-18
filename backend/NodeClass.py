@@ -24,12 +24,18 @@ class Node:
     def dfs (self, row, col, maze, endpoint):
         if(row < 0 or row >=  len(maze) or
             col < 0 or col >=  len(maze) or 
-            maze[row][col] == 1):
+            maze[row][col] == 1 ):
             return False 
         #add current location to visited and StackPath
-
-        self.visited.add (row, col)
-        self.StackPath.append (row, col)
+        if (row, col) in self.visited:
+            return False
+            
+        self.visited.add((row, col))
+        self.StackPath.append((row, col))
+        
+        #check if endpoint is reached
+        if (row, col) == endpoint:
+            return True
 
         for row_direction, col_direction in [(-1, 0), (1,0), (0,-1), (0,1)]:
             #recursive call to search diretions for endpoint
@@ -41,11 +47,11 @@ class Node:
         self.StackPath.pop()
         return False
     
-        def printdfs(self, row, col, maze, endpoint):
-            if self.dfs(row, col, maze, endpoint):
-                print('nodes visited: ', self.visited, 'path: ', self.StackPath)
-            else:
-                print('error')   
+    def printdfs(self, row, col, maze, endpoint):
+        if self.dfs(row, col, maze, endpoint):
+            print('nodes visited: ', self.visited, 'path: ', self.StackPath)
+        else:
+            print('error')   
 
     
     def bfs (self, start, maze, endpoint):
@@ -126,14 +132,14 @@ def main():
 
     node = Node(port=0, name="TestNode")
 
-    # print("\n--- DFS TEST ---")
-    # node.visited.clear()
-    # node.StackPath.clear()
-    # if node.dfs(start[0], start[1], maze, end):
-    #     print("DFS path found:")
-    #     print(node.StackPath)
-    # else:
-    #     print("DFS failed")
+    print("\n--- DFS TEST ---")
+    node.visited.clear()
+    node.StackPath.clear()
+    if node.dfs(start[0], start[1], maze, end):
+        print("DFS path found:")
+        print(node.StackPath)
+    else:
+        print("DFS failed")
 
     print("\n--- BFS TEST ---")
     node.visited.clear()
