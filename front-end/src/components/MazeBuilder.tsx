@@ -84,9 +84,15 @@ interface MazeBuilderProps {
   onBack: () => void;
   onSendMaze: (maze: number[][], start: [number, number], end: [number, number]) => void;
   wsConnected: boolean;
+  backendMessage?: string | null;
 }
 
-function MazeBuilder({ onBack, onSendMaze, wsConnected }: MazeBuilderProps) {
+function MazeBuilder({
+  onBack,
+  onSendMaze,
+  wsConnected,
+  backendMessage = null
+}: MazeBuilderProps) {
   const [exportType, setExportType] = useState<'csv' | 'json'>('csv');
 
   // Export maze as CSV or JSON
@@ -317,6 +323,25 @@ function MazeBuilder({ onBack, onSendMaze, wsConnected }: MazeBuilderProps) {
               {maze ? (
                 <>
                   <MazeGrid maze={maze} start={startPt} end={endPt} />
+                  {backendMessage && (
+                    <div
+                      style={{
+                        marginTop: "1rem",
+                        padding: "0.75rem",
+                        background: "#111",
+                        color: "#0f0",
+                        fontFamily: "monospace",
+                        fontSize: "0.85rem",
+                        borderRadius: "6px",
+                        maxHeight: "200px",
+                        overflowY: "auto",
+                        width: "100%"
+                      }}
+                    >
+                      <b>Message from Node:</b>
+                      <pre style={{ margin: 0 }}>{backendMessage}</pre>
+                    </div>
+                  )}
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1.5em' }}>
                     <Button className="button-run-maze" onClick={handleSendMaze}>Run Maze</Button>
                     <div className="export-btn-group">

@@ -3,6 +3,7 @@
 import socket
 import asyncio
 from collections import deque
+import json
 
 class Node:
     def __init__(self, port, name):
@@ -117,6 +118,10 @@ class Node:
     def save_message(self, msg, filename="received_messages.txt"):
         with open(filename, "a") as f:
             f.write(f"{msg}\n")
+
+    def send_json(self, ip, port, payload: dict):
+        message = json.dumps(payload)
+        self.sock.sendto(message.encode("utf-8"), (ip, port))
  
 def main():
     maze = [
