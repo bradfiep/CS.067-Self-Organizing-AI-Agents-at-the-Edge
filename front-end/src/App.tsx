@@ -4,11 +4,13 @@ import './App.css';
 import Header from './components/Header';
 import Button from './components/Button';
 import MazeBuilder from './components/MazeBuilder';
+import AgentActivity from './components/AgentActivity';
 import mazeImg from './assets/maze.png';
 
 function App() {
   // State management for the application
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
   const [backendMessage, setBackendMessage] = useState<string | null>(null);
 
 
@@ -65,6 +67,9 @@ function App() {
 
     ws.current.send(JSON.stringify(payload));
     console.log("Maze sent via WebSocket");
+
+    setShowActivity(true);
+    setShowBuilder(false);
   };
 
   // Header actions component
@@ -76,6 +81,23 @@ function App() {
     </div>
   );
 
+  // Show Agent Activity page
+  if (showActivity) {
+    return (
+      <>
+        <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
+        <AgentActivity
+          onBack={() => {
+            setShowActivity(false);
+            setShowBuilder(true);
+          }}
+          wsConnected={ws.current?.readyState === WebSocket.OPEN}
+          backendMessage={backendMessage}
+        />
+      </>
+    );
+  }
+  
   if (showBuilder) {
     // Render the Maze Builder interface
     return (
