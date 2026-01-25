@@ -91,7 +91,6 @@ function App() {
             setShowActivity(false);
             setShowBuilder(true);
           }}
-          wsConnected={ws.current?.readyState === WebSocket.OPEN}
           backendMessage={backendMessage}
         />
       </>

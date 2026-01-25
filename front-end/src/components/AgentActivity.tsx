@@ -22,7 +22,6 @@ interface ActivityLog {
 
 interface AgentActivityProps {
   onBack: () => void;
-  wsConnected: boolean;
   backendMessage?: string | null;
 }
 
@@ -64,7 +63,6 @@ function ActivityFeedItem({ log, agents }: { log: ActivityLog; agents: Agent[] }
 
 export default function AgentActivity({
   onBack,
-  wsConnected,
   backendMessage
 }: AgentActivityProps) {
   // Initialize agents with placeholder data
