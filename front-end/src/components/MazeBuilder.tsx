@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Button from './Button';
 import MazeKey from './MazeKey';
+import MazeGrid from './MazeGrid';
 
 // Utility functions for parsing maze data from CSV and JSON formats
 // Parses CSV with optional start/end points in first two lines
@@ -28,36 +29,6 @@ function parseMazeJSON(json: string): number[][] {
   } catch {
     return [];
   }
-}
-
-// Component to render the maze as a grid table
-function MazeGrid({ maze, start, end }: { maze: number[][], start: [number, number], end: [number, number] }) {
-  return (
-    <div className="maze-grid-container">
-      <table className="maze-table">
-        <tbody>
-          {maze.map((row, rIdx) => (
-            <tr key={rIdx}>
-              {row.map((cell, cIdx) => {
-                let bg = cell === 1 ? '#222' : '#eee';
-                let content = '';
-                if (start[0] === rIdx && start[1] === cIdx) {
-                  bg = '#4caf50'; content = 'A';
-                } else if (end[0] === rIdx && end[1] === cIdx) {
-                  bg = '#e53935'; content = 'B';
-                }
-                return (
-                  <td className="maze-cell" style={{ background: bg }} key={cIdx}>
-                    {content}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 }
 
 // Component for the hover trigger that shows the maze key popup

@@ -356,6 +356,8 @@
   background: #fff;
   border-radius: 8px;
   padding: 8px;
+  max-height: 420px;
+  overflow-y: auto;
 }
 
 .maze-table {
@@ -578,11 +580,15 @@
   border-radius: 12px;
   padding: 1rem;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: auto;
+  overflow-y: auto;
+  max-height: 480px;
+  min-height: 120px;
   height: 100%;
-    box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+.activity-maze-preview > .maze-grid-container {
+  margin: auto;
 }
 
 /* Activity Feed */

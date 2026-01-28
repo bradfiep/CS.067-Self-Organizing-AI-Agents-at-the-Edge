@@ -104,6 +104,9 @@ function App() {
             setShowBuilder(true);
           }}
           backendMessage={backendMessage}
+          maze={maze}
+          startPt={startPt}
+          endPt={endPt}
         />
       </>
     );

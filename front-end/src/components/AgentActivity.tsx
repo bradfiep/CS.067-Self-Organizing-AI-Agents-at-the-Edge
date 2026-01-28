@@ -1,6 +1,7 @@
 // src/components/AgentActivity.tsx
 import { useState, useEffect } from 'react';
 import Button from './Button';
+import MazeGrid from './MazeGrid';
 
 // Type definitions
 interface Agent {
@@ -23,6 +24,9 @@ interface ActivityLog {
 interface AgentActivityProps {
   onBack: () => void;
   backendMessage?: string | null;
+  maze: number[][] | null;
+  startPt: [number, number];
+  endPt: [number, number];
 }
 
 // Agent list item component
@@ -63,7 +67,10 @@ function ActivityFeedItem({ log, agents }: { log: ActivityLog; agents: Agent[] }
 
 export default function AgentActivity({
   onBack,
-  backendMessage
+  backendMessage,
+  maze,
+  startPt,
+  endPt
 }: AgentActivityProps) {
   // Initialize agents with placeholder data
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -182,11 +189,13 @@ export default function AgentActivity({
             {/* Maze Preview Section */}
             <div style={{ flex: 7, minHeight: 0 }}>
               <div className="activity-maze-preview">
-                {/* TODO: <MazeGrid> component */}    
-
-                <div style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>
-                  Maze Preview 
-                </div>
+                {maze ? (
+                  <MazeGrid maze={maze} start={startPt} end={endPt} />
+                ) : (
+                  <div style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>
+                    Maze Preview
+                  </div>
+                )}
               </div>
             </div>
           </div>
