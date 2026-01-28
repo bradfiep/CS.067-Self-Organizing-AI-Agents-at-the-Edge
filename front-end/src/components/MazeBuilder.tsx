@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Button from './Button';
 import MazeKey from './MazeKey';
+import MazeGrid from './MazeGrid';
 
 // Utility functions for parsing maze data from CSV and JSON formats
 // Parses CSV with optional start/end points in first two lines
@@ -30,36 +31,6 @@ function parseMazeJSON(json: string): number[][] {
   }
 }
 
-// Component to render the maze as a grid table
-function MazeGrid({ maze, start, end }: { maze: number[][], start: [number, number], end: [number, number] }) {
-  return (
-    <div className="maze-grid-container">
-      <table className="maze-table">
-        <tbody>
-          {maze.map((row, rIdx) => (
-            <tr key={rIdx}>
-              {row.map((cell, cIdx) => {
-                let bg = cell === 1 ? '#222' : '#eee';
-                let content = '';
-                if (start[0] === rIdx && start[1] === cIdx) {
-                  bg = '#4caf50'; content = 'A';
-                } else if (end[0] === rIdx && end[1] === cIdx) {
-                  bg = '#e53935'; content = 'B';
-                }
-                return (
-                  <td className="maze-cell" style={{ background: bg }} key={cIdx}>
-                    {content}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 // Component for the hover trigger that shows the maze key popup
 function MazeKeyHover() {
   const [show, setShow] = useState(false);
@@ -85,15 +56,54 @@ interface MazeBuilderProps {
   onSendMaze: (maze: number[][], start: [number, number], end: [number, number]) => void;
   wsConnected: boolean;
   backendMessage?: string | null;
+  exportType: 'csv' | 'json';
+  setExportType: React.Dispatch<React.SetStateAction<'csv' | 'json'>>;
+  inputType: 'csv' | 'json';
+  setInputType: React.Dispatch<React.SetStateAction<'csv' | 'json'>>;
+  csv: string;
+  setCsv: React.Dispatch<React.SetStateAction<string>>;
+  json: string;
+  setJson: React.Dispatch<React.SetStateAction<string>>;
+  start: string;
+  setStart: React.Dispatch<React.SetStateAction<string>>;
+  end: string;
+  setEnd: React.Dispatch<React.SetStateAction<string>>;
+  maze: number[][] | null;
+  setMaze: React.Dispatch<React.SetStateAction<number[][] | null>>;
+  startPt: [number, number];
+  setStartPt: React.Dispatch<React.SetStateAction<[number, number]>>;
+  endPt: [number, number];
+  setEndPt: React.Dispatch<React.SetStateAction<[number, number]>>;
+  error: string;
+  setError: React.Dispatch<React.SetStateAction<string>>;
 }
 
 function MazeBuilder({
   onBack,
   onSendMaze,
   wsConnected,
-  backendMessage = null
+  backendMessage = null,
+  exportType,
+  setExportType,
+  inputType,
+  setInputType,
+  csv,
+  setCsv,
+  json,
+  setJson,
+  start,
+  setStart,
+  end,
+  setEnd,
+  maze,
+  setMaze,
+  startPt,
+  setStartPt,
+  endPt,
+  setEndPt,
+  error,
+  setError
 }: MazeBuilderProps) {
-  const [exportType, setExportType] = useState<'csv' | 'json'>('csv');
 
   // Export maze as CSV or JSON
   const handleExportMaze = () => {
@@ -119,15 +129,6 @@ function MazeBuilder({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-  const [inputType, setInputType] = useState<'csv' | 'json'>('csv');
-  const [csv, setCsv] = useState('');
-  const [json, setJson] = useState('');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
-  const [maze, setMaze] = useState<number[][] | null>(null);
-  const [startPt, setStartPt] = useState<[number, number]>([0, 0]);
-  const [endPt, setEndPt] = useState<[number, number]>([0, 0]);
-  const [error, setError] = useState('');
 
   // Comprehensive handler to generate and validate maze from input data
   const handleGenerateMaze = () => {
