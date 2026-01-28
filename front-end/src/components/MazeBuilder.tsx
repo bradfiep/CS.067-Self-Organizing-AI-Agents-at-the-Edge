@@ -85,15 +85,54 @@ interface MazeBuilderProps {
   onSendMaze: (maze: number[][], start: [number, number], end: [number, number]) => void;
   wsConnected: boolean;
   backendMessage?: string | null;
+  exportType: 'csv' | 'json';
+  setExportType: React.Dispatch<React.SetStateAction<'csv' | 'json'>>;
+  inputType: 'csv' | 'json';
+  setInputType: React.Dispatch<React.SetStateAction<'csv' | 'json'>>;
+  csv: string;
+  setCsv: React.Dispatch<React.SetStateAction<string>>;
+  json: string;
+  setJson: React.Dispatch<React.SetStateAction<string>>;
+  start: string;
+  setStart: React.Dispatch<React.SetStateAction<string>>;
+  end: string;
+  setEnd: React.Dispatch<React.SetStateAction<string>>;
+  maze: number[][] | null;
+  setMaze: React.Dispatch<React.SetStateAction<number[][] | null>>;
+  startPt: [number, number];
+  setStartPt: React.Dispatch<React.SetStateAction<[number, number]>>;
+  endPt: [number, number];
+  setEndPt: React.Dispatch<React.SetStateAction<[number, number]>>;
+  error: string;
+  setError: React.Dispatch<React.SetStateAction<string>>;
 }
 
 function MazeBuilder({
   onBack,
   onSendMaze,
   wsConnected,
-  backendMessage = null
+  backendMessage = null,
+  exportType,
+  setExportType,
+  inputType,
+  setInputType,
+  csv,
+  setCsv,
+  json,
+  setJson,
+  start,
+  setStart,
+  end,
+  setEnd,
+  maze,
+  setMaze,
+  startPt,
+  setStartPt,
+  endPt,
+  setEndPt,
+  error,
+  setError
 }: MazeBuilderProps) {
-  const [exportType, setExportType] = useState<'csv' | 'json'>('csv');
 
   // Export maze as CSV or JSON
   const handleExportMaze = () => {
@@ -119,15 +158,6 @@ function MazeBuilder({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-  const [inputType, setInputType] = useState<'csv' | 'json'>('csv');
-  const [csv, setCsv] = useState('');
-  const [json, setJson] = useState('');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
-  const [maze, setMaze] = useState<number[][] | null>(null);
-  const [startPt, setStartPt] = useState<[number, number]>([0, 0]);
-  const [endPt, setEndPt] = useState<[number, number]>([0, 0]);
-  const [error, setError] = useState('');
 
   // Comprehensive handler to generate and validate maze from input data
   const handleGenerateMaze = () => {
