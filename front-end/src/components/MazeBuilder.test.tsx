@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import MazeBuilder from './MazeBuilder';
@@ -381,11 +382,12 @@ describe('MazeBuilder Component', () => {
 
   describe('Maze Submission', () => {
     it('should call onSendMaze when Run Maze button is clicked', async () => {
-      const props = getDefaultProps();
-      props.maze = [[0, 1, 0], [1, 0, 1], [0, 1, 0]];
-      props.startPt = [0, 0];
-      props.endPt = [2, 2];
-      
+      const props = { 
+        ...getDefaultProps(), 
+        maze: [[0, 1, 0], [1, 0, 1], [0, 1, 0]] as number[][] | null,
+        startPt: [0, 0] as [number, number],
+        endPt: [2, 2] as [number, number]
+      };
       render(<MazeBuilder {...props} />);
       
       await waitFor(() => {
@@ -404,12 +406,13 @@ describe('MazeBuilder Component', () => {
     });
 
     it('should show error when WebSocket is not connected', async () => {
-      const props = getDefaultProps();
-      props.wsConnected = false;
-      props.maze = [[0, 1, 0], [1, 0, 1], [0, 1, 0]];
-      props.startPt = [0, 0];
-      props.endPt = [2, 2];
-      
+      const props = { 
+        ...getDefaultProps(), 
+        wsConnected: false,
+        maze: [[0, 1, 0], [1, 0, 1], [0, 1, 0]] as number[][] | null,
+        startPt: [0, 0] as [number, number],
+        endPt: [2, 2] as [number, number]
+      };
       render(<MazeBuilder {...props} />);
       
       await waitFor(() => {

@@ -63,9 +63,7 @@ describe('AgentActivity Component', () => {
     });
 
     it('should show placeholder when no maze data', () => {
-      const props = getDefaultProps();
-      props.maze = null;
-      
+      const props = { ...getDefaultProps(), maze: null as number[][] | null };
       render(<AgentActivity {...props} />);
       
       expect(screen.getByText('Maze Preview')).toBeInTheDocument();
@@ -74,15 +72,13 @@ describe('AgentActivity Component', () => {
 
   describe('Agent Registration', () => {
     it('should register a new agent when receiving agent_registered message', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 1')).toBeInTheDocument();
@@ -93,15 +89,13 @@ describe('AgentActivity Component', () => {
     });
 
     it('should add agent registration to activity log', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [1, 2],
         status: 'exploring'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         expect(screen.getByText(/Agent registered at position \(1,2\)/)).toBeInTheDocument();
@@ -109,31 +103,26 @@ describe('AgentActivity Component', () => {
     });
 
     it('should not add duplicate agents', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // First registration
-      props.backendMessage = JSON.stringify({
+      const msg1 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 1')).toBeInTheDocument();
       });
 
       // Try to register same agent again
-      props.backendMessage = JSON.stringify({
+      const msg2 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [1, 1],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
 
       // Should still only have one Agent 1
       const agentElements = screen.getAllByText('Agent 1');
@@ -141,31 +130,26 @@ describe('AgentActivity Component', () => {
     });
 
     it('should register multiple different agents', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // Register Agent 1
-      props.backendMessage = JSON.stringify({
+      const msg1 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 1')).toBeInTheDocument();
       });
 
       // Register Agent 2
-      props.backendMessage = JSON.stringify({
+      const msg2 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 2',
         position: [1, 1],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 2')).toBeInTheDocument();
@@ -179,31 +163,26 @@ describe('AgentActivity Component', () => {
 
   describe('Agent Movement', () => {
     it('should update agent position when receiving agent_move message', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // Register agent first
-      props.backendMessage = JSON.stringify({
+      const msg1 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
 
       await waitFor(() => {
         expect(screen.getByText('Pos: (0,0)')).toBeInTheDocument();
       });
 
       // Move agent
-      props.backendMessage = JSON.stringify({
+      const msg2 = JSON.stringify({
         type: 'agent_move',
         agent_name: 'Agent 1',
         from_position: [0, 0],
         to_position: [1, 0]
       });
-      rerender(<AgentActivity {...props} />);
+      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
 
       await waitFor(() => {
         expect(screen.getByText('Pos: (1,0)')).toBeInTheDocument();
@@ -211,31 +190,26 @@ describe('AgentActivity Component', () => {
     });
 
     it('should add agent move to activity log', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // Register agent first
-      props.backendMessage = JSON.stringify({
+      const msg1 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 1')).toBeInTheDocument();
       });
 
       // Move agent
-      props.backendMessage = JSON.stringify({
+      const msg2 = JSON.stringify({
         type: 'agent_move',
         agent_name: 'Agent 1',
         from_position: [0, 0],
         to_position: [1, 0]
       });
-      rerender(<AgentActivity {...props} />);
+      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
 
       await waitFor(() => {
         expect(screen.getByText(/Moving one step from position \(0,0\) to position \(1,0\)/)).toBeInTheDocument();
@@ -243,31 +217,26 @@ describe('AgentActivity Component', () => {
     });
 
     it('should update agent status to exploring when moving', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // Register agent with inactive status
-      props.backendMessage = JSON.stringify({
+      const msg1 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'inactive'
       });
-      rerender(<AgentActivity {...props} />);
+      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
 
       await waitFor(() => {
         expect(screen.getByText('Status: inactive')).toBeInTheDocument();
       });
 
       // Move agent
-      props.backendMessage = JSON.stringify({
+      const msg2 = JSON.stringify({
         type: 'agent_move',
         agent_name: 'Agent 1',
         from_position: [0, 0],
         to_position: [1, 0]
       });
-      rerender(<AgentActivity {...props} />);
+      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
 
       await waitFor(() => {
         expect(screen.getByText('Status: exploring')).toBeInTheDocument();
@@ -277,13 +246,11 @@ describe('AgentActivity Component', () => {
 
   describe('ACK Messages', () => {
     it('should display ACK messages in activity log', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'ack',
         status: 'Maze received successfully'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         expect(screen.getByText('Maze received successfully')).toBeInTheDocument();
@@ -291,12 +258,10 @@ describe('AgentActivity Component', () => {
     });
 
     it('should show default acknowledged message when status not provided', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'ack'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         expect(screen.getByText('Acknowledged')).toBeInTheDocument();
@@ -306,31 +271,26 @@ describe('AgentActivity Component', () => {
 
   describe('Activity Log', () => {
     it('should display activity logs in chronological order (newest first)', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // Add first activity
-      props.backendMessage = JSON.stringify({
+      const msg1 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
 
       await waitFor(() => {
         expect(screen.getByText(/Agent registered/)).toBeInTheDocument();
       });
 
       // Add second activity
-      props.backendMessage = JSON.stringify({
+      const msg2 = JSON.stringify({
         type: 'agent_move',
         agent_name: 'Agent 1',
         from_position: [0, 0],
         to_position: [1, 0]
       });
-      rerender(<AgentActivity {...props} />);
+      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
 
       await waitFor(() => {
         expect(screen.getByText(/Moving one step/)).toBeInTheDocument();
@@ -342,18 +302,13 @@ describe('AgentActivity Component', () => {
     });
 
     it('should limit activity logs to 50 entries', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // Register agent first
-      props.backendMessage = JSON.stringify({
+      const msg1 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 1')).toBeInTheDocument();
@@ -361,13 +316,13 @@ describe('AgentActivity Component', () => {
 
       // Add 51 move messages
       for (let i = 0; i < 51; i++) {
-        props.backendMessage = JSON.stringify({
+        const msg = JSON.stringify({
           type: 'agent_move',
           agent_name: 'Agent 1',
           from_position: [i % 3, 0],
           to_position: [(i + 1) % 3, 0]
         });
-        rerender(<AgentActivity {...props} />);
+        rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
       }
 
       await waitFor(() => {
@@ -378,15 +333,13 @@ describe('AgentActivity Component', () => {
     });
 
     it('should display timestamp for each activity log entry', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         const timeElement = document.querySelector('.activity-log-time');
@@ -399,18 +352,13 @@ describe('AgentActivity Component', () => {
 
   describe('Agent Colors', () => {
     it('should assign different colors to different agents', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // Register Agent 1
-      props.backendMessage = JSON.stringify({
+      const msg1 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 1')).toBeInTheDocument();
@@ -420,13 +368,13 @@ describe('AgentActivity Component', () => {
       const agent1Color = agent1Avatar ? window.getComputedStyle(agent1Avatar).background : '';
 
       // Register Agent 2
-      props.backendMessage = JSON.stringify({
+      const msg2 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 2',
         position: [1, 1],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 2')).toBeInTheDocument();
@@ -441,15 +389,13 @@ describe('AgentActivity Component', () => {
     });
 
     it('should use agent color for activity log border', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         const logItem = document.querySelector('.activity-log-item');
@@ -463,52 +409,39 @@ describe('AgentActivity Component', () => {
 
   describe('Error Handling', () => {
     it('should handle invalid JSON without crashing', () => {
-      const props = getDefaultProps();
-      props.backendMessage = 'not valid json';
-
       // Should not throw an error
-      expect(() => render(<AgentActivity {...props} />)).not.toThrow();
+      expect(() => render(<AgentActivity {...getDefaultProps()} backendMessage={'not valid json'} />)).not.toThrow();
     });
 
     it('should handle null backendMessage gracefully', () => {
-      const props = getDefaultProps();
-      props.backendMessage = null;
-
-      expect(() => render(<AgentActivity {...props} />)).not.toThrow();
+      expect(() => render(<AgentActivity {...getDefaultProps()} />)).not.toThrow();
       expect(screen.getByText(/No activity yet/)).toBeInTheDocument();
     });
 
     it('should handle undefined backendMessage gracefully', () => {
-      const props = getDefaultProps();
-      props.backendMessage = undefined;
-
-      expect(() => render(<AgentActivity {...props} />)).not.toThrow();
+      expect(() => render(<AgentActivity {...getDefaultProps()} backendMessage={undefined} />)).not.toThrow();
       expect(screen.getByText(/No activity yet/)).toBeInTheDocument();
     });
 
     it('should handle unknown message types gracefully', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'unknown_type',
         data: 'some data'
       });
-
       // Should not throw an error
-      expect(() => render(<AgentActivity {...props} />)).not.toThrow();
+      expect(() => render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />)).not.toThrow();
     });
   });
 
   describe('Agent Display', () => {
     it('should display agent avatar with first letter', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 5',
         position: [0, 0],
         status: 'exploring'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         const avatar = document.querySelector('.agent-avatar');
@@ -517,15 +450,13 @@ describe('AgentActivity Component', () => {
     });
 
     it('should display agent name and status', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'TestAgent',
         position: [2, 1],
         status: 'completed'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         expect(screen.getByText('TestAgent')).toBeInTheDocument();
@@ -537,15 +468,13 @@ describe('AgentActivity Component', () => {
 
   describe('Activity Feed Item', () => {
     it('should display agent name in activity log', async () => {
-      const props = getDefaultProps();
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-
-      render(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         expect(screen.getByText('[Agent 1]')).toBeInTheDocument();
@@ -553,18 +482,13 @@ describe('AgentActivity Component', () => {
     });
 
     it('should color-code activity log entries by agent', async () => {
-      const props = getDefaultProps();
-      
-      const { rerender } = render(<AgentActivity {...props} />);
-
-      // Register Agent 1
-      props.backendMessage = JSON.stringify({
+      const msg = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [0, 0],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...props} />);
+      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
 
       await waitFor(() => {
         const agentLabel = screen.getByText('[Agent 1]');
