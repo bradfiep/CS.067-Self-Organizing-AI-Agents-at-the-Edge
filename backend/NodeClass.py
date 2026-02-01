@@ -7,16 +7,31 @@ import json
 
 class Node:
     def __init__(self, port, name):
-        self.port = port
         self.name = name
+        self.udp_port = udp_port
+        self.multicsast_group = multicast_group
+
         #saved list of visited rows, col
         self.visited = set()
         #dfs path uses path as a stack to search maze
         self.StackPath = []
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(("", port))
-        print(f"{self.name} listening on port {port}")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self.sock.bind(("", udp_port))
+        print(f"{self.name} listening on port {udp_port}")
         self.on_message = lambda msg, addr: None
+
+        #get port if not specified
+        if udp_port == 0:
+            self.udp_port = self.sock.getsockname()[1]
+        
+        #message handler setup
+        self.on_udp_message = lambda msg, addr: None
+
+
+        print(f"{self.name} (ID: {self.node_id})")
+        print(f"  UDP listening on port {self.udp_port}")
+        if self.known_peers:
+            print(f"  Known peers: {', '.join(self.known_peers)}")
 
 
 
@@ -80,40 +95,18 @@ class Node:
                     queue.append(((nr, nc), path + [(nr, nc)]))
         return False
 
-    #messaging functions
+    #UDP comunication functions
 
-    async def web_listen(self):
+    async def udp_listen(self):
         loop = asyncio.get_event_loop()
         while True:
             data, addr = await loop.run_in_executor(None, self.sock.recvfrom, 1024)
             msg = data.decode('utf-8')
             print(f"[{self.name}] Received: {msg} from {addr}")
-            self.on_message(msg, addr)
+            self.on_udp_message(msg, addr)
 
-    def node_listen(self, portnumber):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.bind(("", portnumber))
-            print(f"Socket bound to port {portnumber}")
-        except socket.error as err:
-            print(f"Socket creation failed with error {err}")
-        return sock
 
-    def send_data(sock, ip, portnumber, message):
-        try:
-            sock.sendto(message.encode('utf-8'), (ip, portnumber))
-            print(f"Sent message to {ip}:{portnumber}")
-        except socket.error as err:
-            print(f"Failed to send data: {err}")
-            
-    def receive_data(sock):
-        try:
-            data, addr = sock.recvfrom(1024)
-            print(f"Received message from {addr}")
-            return data.decode('utf-8'), addr
-        except socket.error as err:
-            print(f"Failed to receive data: {err}")
-            return None, None
+
 
     def save_message(self, msg, filename="received_messages.txt"):
         with open(filename, "a") as f:
