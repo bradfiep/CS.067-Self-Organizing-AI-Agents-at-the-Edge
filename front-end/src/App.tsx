@@ -4,12 +4,26 @@ import './App.css';
 import Header from './components/Header';
 import Button from './components/Button';
 import MazeBuilder from './components/MazeBuilder';
+import AgentActivity from './components/AgentActivity';
 import mazeImg from './assets/maze.png';
 
 function App() {
   // State management for the application
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
   const [backendMessage, setBackendMessage] = useState<string | null>(null);
+
+  // MazeBuilder state lifted here
+  const [exportType, setExportType] = useState<'csv' | 'json'>('csv');
+  const [inputType, setInputType] = useState<'csv' | 'json'>('csv');
+  const [csv, setCsv] = useState('');
+  const [json, setJson] = useState('');
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [maze, setMaze] = useState<number[][] | null>(null);
+  const [startPt, setStartPt] = useState<[number, number]>([0, 0]);
+  const [endPt, setEndPt] = useState<[number, number]>([0, 0]);
+  const [error, setError] = useState('');
 
 
   const ws = useRef<WebSocket | null>(null);
@@ -65,6 +79,9 @@ function App() {
 
     ws.current.send(JSON.stringify(payload));
     console.log("Maze sent via WebSocket");
+
+    setShowActivity(true);
+    setShowBuilder(false);
   };
 
   // Header actions component
@@ -76,16 +93,72 @@ function App() {
     </div>
   );
 
+  // Show Agent Activity page
+  if (showActivity) {
+    return (
+      <>
+        <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
+        <AgentActivity
+          onBack={() => {
+            setShowActivity(false);
+            setShowBuilder(true);
+          }}
+          backendMessage={backendMessage}
+          maze={maze}
+          startPt={startPt}
+          endPt={endPt}
+        />
+      </>
+    );
+  }
+  
+  // Handler to reset MazeBuilder state
+  const resetMazeBuilderState = () => {
+    setExportType('csv');
+    setInputType('csv');
+    setCsv('');
+    setJson('');
+    setStart('');
+    setEnd('');
+    setMaze(null);
+    setStartPt([0, 0]);
+    setEndPt([0, 0]);
+    setError('');
+  };
+
   if (showBuilder) {
     // Render the Maze Builder interface
     return (
       <>
         <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
-        <MazeBuilder 
-          onBack={() => setShowBuilder(false)}
+        <MazeBuilder
+          onBack={() => {
+            resetMazeBuilderState();
+            setShowBuilder(false);
+          }}
           onSendMaze={handleSendMaze}
           wsConnected={ws.current?.readyState === WebSocket.OPEN}
           backendMessage={backendMessage}
+          exportType={exportType}
+          setExportType={setExportType}
+          inputType={inputType}
+          setInputType={setInputType}
+          csv={csv}
+          setCsv={setCsv}
+          json={json}
+          setJson={setJson}
+          start={start}
+          setStart={setStart}
+          end={end}
+          setEnd={setEnd}
+          maze={maze}
+          setMaze={setMaze}
+          startPt={startPt}
+          setStartPt={setStartPt}
+          endPt={endPt}
+          setEndPt={setEndPt}
+          error={error}
+          setError={setError}
         />
       </>
     );
