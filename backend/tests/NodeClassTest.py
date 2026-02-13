@@ -12,10 +12,10 @@ from NodeClass import Node
 def test_node_init_prints_listening(capsys):
     """Creating a Node should print a listening message to stdout."""
     # Use port 0 so the OS assigns an ephemeral port and we avoid collisions
-    node = Node(0, "TestNode")
+    node = Node(0, "TestNode", multicast_group1, 001)
     # capture what was printed during __init__
     captured = capsys.readouterr()
-    assert "TestNode listening on port" in captured.out
+    assert "TestNode listening on port 0" in captured.out
 
     # cleanup socket created by Node.__init__
     try:
@@ -27,7 +27,7 @@ def test_node_init_prints_listening(capsys):
 
 def test_node_listen_prints_socket_bound(capsys):
     """Calling node_listen should create and bind a UDP socket and print a message."""
-    node = Node(0, "TmpNode")
+    node = Node(0, "TestNode", multicast_group1, 001)
     capsys.readouterr()  
 
     sock = node.node_listen(0)
