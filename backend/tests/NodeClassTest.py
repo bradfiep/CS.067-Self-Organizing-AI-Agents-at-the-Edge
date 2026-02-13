@@ -8,85 +8,91 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from NodeClass import Node
 
+# Configuration constants
+MULTICAST_GROUP = "224.0.0.1"
 
 def test_node_init_prints_listening(capsys):
-    """Creating a Node should print a listening message to stdout."""
-    # Use port 0 so the OS assigns an ephemeral port and we avoid collisions
-    node = Node(0, "TestNode", multicast_group1, 001)
-    # capture what was printed during __init__
+    """
+    Creating a Node should bind the socket and print a listening message.
+    """
+    # New Signature: port, name, multicast_group, node_id
+    node = Node(0, "TestNode", MULTICAST_GROUP, 1)
+    
+    # Capture stdout
     captured = capsys.readouterr()
-    assert "TestNode listening on port 0" in captured.out
+    
+    # Check for the print statement from __init__
+    # Based on your diff: print(f"{self.name} listening on port {udp_port}")
+    assert "TestNode listening on port" in captured.out
 
-    # cleanup socket created by Node.__init__
-    try:
-        node.sock.close()
-    except Exception:
-        print(f"Could not close TestNode socket")
-        pass
-
-
-def test_node_listen_prints_socket_bound(capsys):
-    """Calling node_listen should create and bind a UDP socket and print a message."""
-    node = Node(0, "TestNode", multicast_group1, 001)
-    capsys.readouterr()  
-
-    sock = node.node_listen(0)
-    captured = capsys.readouterr()
-
-    assert "Socket bound to port" in captured.out
-
-    # cleanup created sockets
-    try:
-        sock.close()
-    except Exception:
-        print(f"Could not close socket bound to port 0")
-        pass
-    try:
-        node.sock.close()
-    except Exception:
-        print(f"Could not close TmpNode socket")
-        pass
+    # Cleanup
+    node.stop()
 
 
-def test_receive_data_success(capsys):
-    """Node.receive_data should return decoded message and sender address."""
-    sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    receiver = Node(0, "Receiver")
-    port = receiver.sock.getsockname()[1]
+@pytest.mark.asyncio
+async def test_udp_communication_flow():
+    """
+    Tests that two nodes can spin up listeners and exchange a UDP message.
+    """
+    # 1. Initialize Nodes
+    node1 = Node(0, "NodeA", MULTICAST_GROUP, 1)
+    node2 = Node(0, "NodeB", MULTICAST_GROUP, 2)
+    
+    # Capture received messages in a list so we can assert on them
+    received_msgs = []
+    
+    # Mock handlers to capture data
+    node2.on_udp_message = lambda msg, addr: received_msgs.append(msg)
 
-    sender.sendto(b"Ping", ("127.0.0.1", port))
-    msg, addr = Node.receive_data(receiver.sock)
+    # 2. Start Listeners
+    # We use create_task because udp_listen is an infinite loop
+    task1 = asyncio.create_task(node1.udp_listen())
+    task2 = asyncio.create_task(node2.udp_listen())
 
-    captured = capsys.readouterr()
-    assert msg == "Ping"
-    assert "Received message from" in captured.out
-    assert addr[0] == "127.0.0.1"
+    # Give the event loop a moment to start the servers
+    await asyncio.sleep(0.1)
 
-    sender.close()
-    receiver.sock.close()
+    # 3. Send Message (Node1 -> Node2)
+    # We must retrieve the actual port Node2 was assigned (since we passed 0)
+    target_port = node2.udp_port
+    
+    test_payload = {"type": "test", "payload": "Integration Test Message"}
+    
+    # Use the new send_udp method
+    node1.send_udp("127.0.0.1", target_port, test_payload)
 
+    # Wait for processing
+    await asyncio.sleep(0.2)
 
-def test_send_message(monkeypatch):
-    captured_output = io.StringIO()
-    sys.stdout = captured_output
-    node = Node(6000, "Node1")
-    sock = node.node_listen(6000)
-    Node.send_data(sock, "127.0.0.1", 6000, "Hello")
+    # 4. Assertions
+    # Check if the message JSON string is in the received list
+    # (The Node class decodes the JSON, so we look for the payload string)
+    found = any("Integration Test Message" in msg for msg in received_msgs)
+    assert found, f"NodeB did not receive the message. Received: {received_msgs}"
 
-    sys.stdout = sys.__stdout__
-    output = captured_output.getvalue()
-    assert "Sent message to 127.0.0.1:6000" in output
-    sock.close()
+    # 5. Cleanup
+    # Stop the nodes (sets _listening = False and closes sockets)
+    node1.stop()
+    node2.stop()
+    
+    # Cancel the asyncio tasks
+    task1.cancel()
+    task2.cancel()
+    
+    # Wait for tasks to cancel cleanly
+    await asyncio.gather(task1, task2, return_exceptions=True)
 
-
-def test_save_message_creates_file_and_writes_content(tmp_path):
-    """Test that save_message writes a message to the specified file."""
+def test_save_message_creates_file(tmp_path):
+    """
+    Test that save_message writes a message to the specified file.
+    """
     file_path = tmp_path / "test_messages.txt"
-    node = Node(0, "Saver")
+    node = Node(0, "Saver", MULTICAST_GROUP, 2)
 
     node.save_message("Hello world", filename=str(file_path))
 
     with open(file_path, "r") as f:
         content = f.read()
+    
     assert "Hello world" in content
-    node.sock.close()
+    node.stop()
