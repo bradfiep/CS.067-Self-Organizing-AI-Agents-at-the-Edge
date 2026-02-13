@@ -12,22 +12,66 @@ All contributors are expected to follow the following standards of behavior:
 
 ## Getting Started
 
-List prerequisites, setup steps, environment variables/secrets handling, and how to run the app locally.  
-No prerequisites.
+### Prerequisites
 
-1. Clone the repo from github: ​​[https://github.com/bradfiep/CS.067-Self-Organizing-AI-Agents-at-the-Edge](https://github.com/bradfiep/CS.067-Self-Organizing-AI-Agents-at-the-Edge)   
-2. In frontend/ folder run npm install  
-3. In the same folder run npm run  
-4. Navigate to the localhost link displayed in the terminal
+Node.js (v18+ recommended)
+
+* npm  
+* Python 3.10+  
+* Git
+
+### Setup Instructions
+
+1. Clone the repository from GitHub: ​​[https://github.com/bradfiep/CS.067-Self-Organizing-AI-Agents-at-the-Edge](https://github.com/bradfiep/CS.067-Self-Organizing-AI-Agents-at-the-Edge)   
+2. Set up the frontend:
+
+   cd frontend
+
+   npm install
+
+   npm run dev
+
+	After running the above command, navigate to the localhost URL displayed in the terminal.
+
+3. Set up the backend:   
+   Open three separate terminals, navigate to the backend/ folder in each, and run the following files:  
+1. python main.py  
+2. python node1.py  
+3. python [node2.py](http://node2.py)
+
+## Running Required Checks Locally
+
+Before opening a Pull Request, contributors must run the same checks enforced in CI/CD to ensure the contribution meets our Definition of Done.
+
+### Linting
+
+Run: npm run lint
+
+* Uses ESLint configuration located in frontend/eslint.config.js  
+* All lint errors must be resolved before submitting a PR
+
+Frontend Tests (with coverage)
+
+* Run: npm run test:coverage  
+* All frontend tests must pass. Failing tests will block the PR in CI
+
+Backend Tests
+
+* Run: pytest tests/test\_NodeClass.py \--maxfail=1 \--disable-warnings \-q  
+* If backend tests fail, the CI pipeline will fail and prevent merging
+
+Build Verification
+
+* Run: npm run build  
+* The project must compile successfully before creating a Pull Request
 
 ## Branching & Workflow
 
-Describe the workflow (e.g., trunk-based or GitFlow), default branch, branch naming, and when to rebase vs. merge.  
-1.The main application is kept on the main branch.   
-2.The new branch is created with the name of the task from the GitHub Project with the main as parent branch: feature/bugfix \- ticket/task number in github \- specified small task. For example: feat-10-footer, for the ticket number 10 about visualizing UI components.  
-3.All the work for the specific task should be done in that branch, then committed.  
-4\. When the person is sure they are done with the work, a pull request has to be created for merging their branch with the main.  
-5.Teammates review the pull request to approve/decline the merge. 2 votes are enough to merge/decline the pull request.
+1. The main application is kept on the main branch.   
+2. The new branch is created with the name of the task from the GitHub Project with the main as parent branch: feature/bugfix \- ticket/task number in github \- specified small task. For example: feat-10-footer, for the ticket number 10 about visualizing UI components.  
+3. All the work for the specific task should be done in that branch, then committed.  
+4. When the person is sure they are done with the work, a pull request has to be created for merging their branch with the main.  
+5. Teammates review the pull request to approve/decline the merge. 2 votes are enough to merge/decline the pull request.
 
 ## Issues & Planning
 
@@ -70,6 +114,10 @@ We will reference issues by assigning each issue it’s own branch and starting 
 
 Name the formatter/linter, config file locations, and the exact commands to check/fix locally.
 
+Linter: ESLint  
+Config File: frontend/eslint.config.js  
+Command: npm run lint
+
 ## Testing
 
 Define required test types, how to run tests, expected coverage thresholds, and when new/updated tests are mandatory.
@@ -107,7 +155,7 @@ Outline PR requirements (template, checklist, size limits), reviewer expectation
     * Comments and documentation are present where logic isn’t self-explanatory.  
   * Provide constructive, specific feedback — avoid vague comments.  
 * Approval Rules  
-  * At least one approval from a designated reviewer or team lead required before merge.  
+  * At least two approvals from a designated reviewer or team lead required before merge.  
   * No self-approval for your own PRs
 
 ## CI/CD
@@ -127,7 +175,20 @@ Outline PR requirements (template, checklist, size limits), reviewer expectation
   * All mandatory CI jobs must pass successfully.  
   * The branch must be up-to-date with main to prevent integration issues.  
   * All status checks (build, test, security) must show green.  
-  * At least one approved code review must be completed.
+  * At least two approved code reviews must be completed.
+
+## Definition of Done (DoD)
+
+A contribution is considered complete when:
+
+* Code meets acceptance criteria  
+* Code builds successfully  
+* All automated tests pass  
+* Linting passes  
+* Two peer approvals are completed  
+* Documentation updated if needed  
+* CI pipeline passes  
+* No critical security warnings remain
 
 ## Security & Secrets
 
@@ -170,5 +231,5 @@ In the event of a real issue, we can rollback by re-deploying a previous git tag
 
 **Contact Channel: [https://discord.gg/a6CdXFvq2P](https://discord.gg/a6CdXFvq2P)**   
 **Expected response time:** Within 48 hours  
-Questions can be asked in *\#questions* channel, using the invite link above.
-
+Questions can be asked in *\#questions* channel, using the invite link above.  
+For urgent issues or blockers, message the Team Lead directly.
