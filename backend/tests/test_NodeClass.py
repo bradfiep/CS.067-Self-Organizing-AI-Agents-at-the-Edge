@@ -23,7 +23,9 @@ def test_node_init_prints_listening(capsys):
         node.sock.close()
 
 def test_save_message_creates_file_and_writes_content(tmp_path):
-    """Test that save_message writes a message to the specified file."""
+    """
+    Test that save_message writes a message to the specified file.
+    """
     file_path = tmp_path / "test_messages.txt"
     # Added 123 as the agent_id
     node = Node(0, "Saver", 123)
@@ -32,6 +34,7 @@ def test_save_message_creates_file_and_writes_content(tmp_path):
 
     with open(file_path, "r") as f:
         content = f.read()
+    
     assert "Hello world" in content
     node.sock.close()
 

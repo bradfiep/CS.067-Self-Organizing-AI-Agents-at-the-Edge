@@ -32,6 +32,7 @@ def test_save_message_creates_file_and_writes_content(tmp_path):
 
     with open(file_path, "r") as f:
         content = f.read()
+    
     assert "Hello world" in content
     node.sock.close()
 
@@ -51,3 +52,4 @@ def test_send_json_exists(capsys):
 # If 'node_listen' and 'receive_data' no longer exist as standalone 
 # public methods, you should remove those tests and instead test 
 # the 'tick' method or the 'process_message' method.
+

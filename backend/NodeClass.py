@@ -404,7 +404,6 @@ class Node:
         except Exception as e:
             print(f"{self.name} failed to save message: {e}")
 
-
 def main():
     """Test the Node class with frontier-based exploration."""
     
@@ -453,3 +452,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    print("NodeClass module test finished.")
