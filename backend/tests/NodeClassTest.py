@@ -12,7 +12,7 @@ from NodeClass import Node
 def test_node_init_prints_listening(capsys):
     """Creating a Node should print a listening message to stdout."""
     # Use port 0 so the OS assigns an ephemeral port and we avoid collisions
-    node = Node(0, "TestNode")
+    node = Node(0, "TestNode", 33333)
     # capture what was printed during __init__
     captured = capsys.readouterr()
     assert "TestNode listening on port" in captured.out
