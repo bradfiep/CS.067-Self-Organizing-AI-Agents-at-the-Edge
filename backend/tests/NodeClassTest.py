@@ -27,7 +27,7 @@ def test_node_init_prints_listening(capsys):
 
 def test_node_listen_prints_socket_bound(capsys):
     """Calling node_listen should create and bind a UDP socket and print a message."""
-    node = Node(0, "TmpNode")
+    node = Node(0, "TmpNode", 33333)
     capsys.readouterr()  
 
     sock = node.node_listen(0)
@@ -51,7 +51,7 @@ def test_node_listen_prints_socket_bound(capsys):
 def test_receive_data_success(capsys):
     """Node.receive_data should return decoded message and sender address."""
     sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    receiver = Node(0, "Receiver")
+    receiver = Node(0, "Receiver", 33333)
     port = receiver.sock.getsockname()[1]
 
     sender.sendto(b"Ping", ("127.0.0.1", port))
@@ -82,7 +82,7 @@ def test_send_message(monkeypatch):
 def test_save_message_creates_file_and_writes_content(tmp_path):
     """Test that save_message writes a message to the specified file."""
     file_path = tmp_path / "test_messages.txt"
-    node = Node(0, "Saver")
+    node = Node(0, "Saver", 33333)
 
     node.save_message("Hello world", filename=str(file_path))
 
