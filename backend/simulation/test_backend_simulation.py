@@ -10,9 +10,11 @@ This script:
 6. Runs for up to 200 ticks or until goal reached
 """
 
+
 import os
 import sys
 import time
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import List, Tuple, Set, Dict
 from spawner import spawn_agents
 from NodeClass import Node
@@ -505,7 +507,7 @@ def main():
         
         # TASK 3: Main simulation loop
         goal_reached = False
-        max_ticks = 200
+        max_ticks = 1000
         
         for tick in range(1, max_ticks + 1):
             # Simulate one tick
