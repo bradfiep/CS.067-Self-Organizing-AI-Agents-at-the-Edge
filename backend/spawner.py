@@ -130,33 +130,3 @@ def spawn_agents(maze: List[List[int]], start_position: Tuple[int, int]) -> List
     return agents
 
 
-def main():
-    """Test the spawner with a sample maze."""
-    
-    # Test maze
-    maze = [
-        [0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-        [0, 1, 0, 1, 0, 1, 0, 1, 1, 0],
-        [0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
-        [1, 1, 0, 1, 1, 1, 0, 1, 0, 1],
-        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    ]
-    
-    start = (0, 0)
-    
-    # Spawn agents
-    agents = spawn_agents(maze, start)
-    
-    print(f"\n=== AGENT STATUS ===")
-    for agent in agents:
-        print(f"{agent.name}: port={agent.port}, position={agent.current_position}")
-    
-    print(f"\n=== FRONTIER STATUS (Initial) ===")
-    for agent in agents:
-        print(f"{agent.name}: frontiers={agent.frontiers}, local_map={len(agent.local_map)} nodes")
-
-
-if __name__ == "__main__":
-    main()
-

@@ -2,9 +2,10 @@ import asyncio
 import json
 import websockets
 import NodeClass
+from spawner import spawn_agents
 
 connected_clients = set()
-event_loop = None   # ✅ store the main asyncio loop safely
+event_loop = None  
 
 
 # -------------------------
@@ -16,37 +17,24 @@ async def handler(websocket):
 
     try:
         async for message in websocket:
-            print(f"Received message from client: {message}")
-
             data = json.loads(message)
             maze = data.get("maze")
             start = data.get("start")
             end = data.get("end")
 
-            # Send maze to Node via UDP
-            NodeClass.Node.send_data(
-                node.sock,
-                "127.0.0.1",
-                9001,
-                json.dumps({
-                    "type": "maze",
-                    "maze": maze,
-                    "start": start,
-                    "end": end
-                })
-            )
-
-            # Optional ACK back to frontend
+            # Acknowledge receipt to the frontend
             await websocket.send(json.dumps({
                 "type": "ack",
-                "status": "Maze sent to Node"
+                "status": "Maze received. Starting swarm simulation..."
             }))
+
+            # Trigger the live simulation directly
+            asyncio.create_task(run_live_simulation(maze, start, end, websocket))
 
     except websockets.exceptions.ConnectionClosed:
         print("Client disconnected")
     finally:
         connected_clients.remove(websocket)
-
 
 # -------------------------
 # UDP Node listener (Node → Python)
@@ -62,7 +50,7 @@ def on_udp_message(msg, addr):
         event_loop
     )
 
-# 🔴 THIS LINE IS CRITICAL
+
 node.on_message = on_udp_message
 
 
@@ -90,11 +78,60 @@ async def broadcast(message):
 
 
 # -------------------------
+# Simulation logic (Node → Python → Frontend)
+# -------------------------
+async def run_live_simulation(maze, start, end, websocket):
+    # 1. Spawn the swarm using your existing spawner logic
+    agents = spawn_agents(maze, tuple(start))
+    
+    tick = 0
+    goal_reached = False
+    
+    # 2. Run the simulation loop
+    while not goal_reached and tick < 500: # Add a max_ticks failsafe
+        tick += 1
+        
+        # Array to hold the state of all agents for the frontend
+        agent_data = []
+        
+        for agent in agents:
+            # Execute the agent's logic for this tick
+            # Note: You may need to adapt this depending on how agent.tick() 
+            # receives the global/local view in your exact implementation
+            agent.tick() 
+            
+            # Check if anyone found the end
+            if agent.current_position == tuple(end):
+                goal_reached = True
+            
+            # Package the agent's current state
+            agent_data.append({
+                "id": agent.agent_id,
+                "position": agent.current_position,
+                "target_frontier": agent.target_frontier,
+                "cells_discovered": len(agent.local_map)
+            })
+
+        # 3. Create the JSON payload for the frontend
+        payload = {
+            "type": "tick_update",
+            "tick": tick,
+            "goal_reached": goal_reached,
+            "agents": agent_data
+        }
+        
+        # 4. Send the data to the frontend
+        await websocket.send(json.dumps(payload))
+        
+        # 5. Pause briefly to allow the frontend to render the frame smoothly
+        await asyncio.sleep(0.1)
+
+# -------------------------
 # Main entry point
 # -------------------------
 async def main():
     global event_loop
-    event_loop = asyncio.get_running_loop()  # ✅ safe loop reference
+    event_loop = asyncio.get_running_loop()  
 
     ws_server = await websockets.serve(handler, "0.0.0.0", 8080)
     udp_listener = asyncio.create_task(node.web_listen())
