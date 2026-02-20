@@ -65,12 +65,42 @@ class Node:
         # Stuck detection
         self.stuck_counter: int = 0
     
+    def send_activity_log(self, log_type: str, extra_data: Optional[Dict] = None):
+        """
+        Send activity log to frontend via the main.py bridge
+        
+        Args:
+            log_type: 'agent_registered', 'agent_move', 'info'
+            extra_data: Additional fields for the log
+        """
+        payload = {
+            "type": log_type,
+            "agent_name": self.name,
+            "agent_id": self.agent_id,
+        }
+        
+        if extra_data:
+            payload.update(extra_data)
+
+        try:
+            self.send_json("127.0.0.1", 9000, payload)
+        except Exception as e:
+            pass
+
     def set_initial_position(self, position: Tuple[int, int]):
         """Set the agent's starting position and initialize local_map."""
         self.current_position = position
         self.local_map[position] = set()
         print(f"{self.name} starting at {position}")
-    
+
+        self.send_activity_log(
+            "agent_registered",
+            {
+                "position": list(position),
+                "status": "exploring"
+            }
+        )
+
     def _manhattan_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
         """Calculate Manhattan distance between two positions."""
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
@@ -432,6 +462,13 @@ class Node:
         if self.target_frontier:
             new_pos = self._move_toward_target()
             if new_pos != self.current_position:
+                self.send_activity_log(
+                    "agent_move",
+                    {
+                        "from_position": list(self.current_position),
+                        "to_position": list(new_pos)
+                    }
+                )
                 self.current_position = new_pos
                 print(f"{self.name} moved to {new_pos}")
             else:
