@@ -199,7 +199,9 @@ export default function AgentActivity({
     else if (data.type === 'simulation_complete') {
       const result = data.goal_reached ? 'Success ✓' : 'Failed ✗';
       const ticks = data.tick ?? 'unknown';
-      const explored = data.explored_pct || Math.round((data.explored_cells / data.total_cells * 100)) || 0;
+      const exploredCells = data.explored_cells ?? 0;
+      const totalCells = data.total_cells ?? 0;
+      const explored = data.explored_pct ?? (totalCells > 0 ? Math.round((exploredCells / totalCells) * 100) : 0);
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
@@ -213,14 +215,15 @@ export default function AgentActivity({
 
     else if (data.type === 'tick_update') {
       // Update agent positions from the tick update
-      if (data.agents && Array.isArray(data.agents)) {
+      if (Array.isArray(data.agents)) {
+        const tickAgents = data.agents;
         setAgents(prev => prev.map(agent => {
           // Match by agent ID: frontend has "agent_0", backend sends id: 0
           const agentNumericId = parseInt(agent.id.split('_')[1]);
           if (Number.isNaN(agentNumericId)) {
             return agent;
           }
-          const updatedAgentData = data.agents.find((a) => a.id === agentNumericId);
+          const updatedAgentData = tickAgents.find((a) => a.id === agentNumericId);
           
           if (updatedAgentData && updatedAgentData.position) {
             return {
