@@ -11,7 +11,7 @@ function App() {
   // State management for the application
   const [showBuilder, setShowBuilder] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
-  const [backendMessage, setBackendMessage] = useState<string | null>(null);
+  const [messageQueue, setMessageQueue] = useState<string[]>([]);
 
   // MazeBuilder state lifted here
   const [exportType, setExportType] = useState<'csv' | 'json'>('csv');
@@ -30,34 +30,17 @@ function App() {
   const wsUrl = import.meta.env.VITE_WEBSOCKET_URL;
 
   useEffect(() => {
-    ws.current = new WebSocket(wsUrl)
-    ws.current.onopen = () => console.log("WebSocket connected");
-    ws.current.onclose = () => console.log("WebSocket disconnected");
-    ws.current.onerror = (err) => console.error("WebSocket error", err);
-
-    return () => {
-      ws.current?.close();
-    };
-  }, [wsUrl]);
-
-  useEffect(() => {
     ws.current = new WebSocket(wsUrl);
-  
+    
     ws.current.onopen = () => console.log("WebSocket connected");
     ws.current.onclose = () => console.log("WebSocket disconnected");
     ws.current.onerror = (err) => console.error("WebSocket error", err);
-  
+    
     ws.current.onmessage = (event) => {
       console.log("Received from backend:", event.data);
-  
-      try {
-        const parsed = JSON.parse(event.data);
-        setBackendMessage(JSON.stringify(parsed, null, 2));
-      } catch {
-        setBackendMessage(event.data);
-      }
+      setMessageQueue(prev => [...prev, event.data]);
     };
-  
+
     return () => {
       ws.current?.close();
     };
@@ -103,7 +86,7 @@ function App() {
             setShowActivity(false);
             setShowBuilder(true);
           }}
-          backendMessage={backendMessage}
+          messageQueue={messageQueue}
           maze={maze}
           startPt={startPt}
           endPt={endPt}
@@ -138,7 +121,7 @@ function App() {
           }}
           onSendMaze={handleSendMaze}
           wsConnected={ws.current?.readyState === WebSocket.OPEN}
-          backendMessage={backendMessage}
+          backendMessage={messageQueue[messageQueue.length - 1] ?? null}
           exportType={exportType}
           setExportType={setExportType}
           inputType={inputType}

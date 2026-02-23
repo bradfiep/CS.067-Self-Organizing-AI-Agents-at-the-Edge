@@ -39,7 +39,7 @@ async def handler(websocket):
 # -------------------------
 # UDP Node listener (Node → Python)
 # -------------------------
-node = NodeClass.Node(9000, "Node1")
+node = NodeClass.Node(9000, "Node1", 0)
 
 def on_udp_message(msg, addr):
     print(f"Node received message: {msg} from {addr}")
@@ -84,6 +84,19 @@ async def run_live_simulation(maze, start, end, websocket):
     # 1. Spawn the swarm using your existing spawner logic
     agents = spawn_agents(maze, tuple(start))
     
+    # Start UDP listeners for all agents so they can communicate with each other
+    listener_tasks = [asyncio.create_task(agent.web_listen()) for agent in agents]
+    
+    # Register agents for frontend agent list
+    for agent in agents:
+        await websocket.send(json.dumps({
+            "type": "agent_registered",
+            "agent_name": agent.name,
+            "agent_id": agent.agent_id,
+            "position": list(agent.current_position),
+            "status": "exploring"
+        }))
+    
     tick = 0
     goal_reached = False
     
@@ -98,11 +111,19 @@ async def run_live_simulation(maze, start, end, websocket):
             # Execute the agent's logic for this tick
             # Note: You may need to adapt this depending on how agent.tick() 
             # receives the global/local view in your exact implementation
-            agent.tick() 
+            agent.tick(maze) 
             
             # Check if anyone found the end
             if agent.current_position == tuple(end):
                 goal_reached = True
+                # Send log to frontend activity page
+                await websocket.send(json.dumps({
+                    "type": "agent_goal_reached",
+                    "agent_name": agent.name,
+                    "agent_id": agent.agent_id,
+                    "position": list(agent.current_position),
+                    "tick": tick
+                }))
             
             # Package the agent's current state
             agent_data.append({
@@ -112,11 +133,19 @@ async def run_live_simulation(maze, start, end, websocket):
                 "cells_discovered": len(agent.local_map)
             })
 
+        # Calculate exploration percentage
+        explored = set()
+        for agent in agents:
+            explored.update(agent.local_map.keys())
+        total_open = sum(1 for row in maze for cell in row if cell == 0)
+        explored_pct = (len(explored) / total_open * 100) if total_open > 0 else 0
+
         # 3. Create the JSON payload for the frontend
         payload = {
             "type": "tick_update",
             "tick": tick,
             "goal_reached": goal_reached,
+            "explored_pct": round(explored_pct, 1),
             "agents": agent_data
         }
         
@@ -125,6 +154,23 @@ async def run_live_simulation(maze, start, end, websocket):
         
         # 5. Pause briefly to allow the frontend to render the frame smoothly
         await asyncio.sleep(0.1)
+    
+    # Compute coverage across all agents and send simulation summary
+    explored = set()
+    for agent in agents:
+        explored.update(agent.local_map.keys())
+
+    total_open = sum(1 for row in maze for cell in row if cell == 0)
+    explored_pct = (len(explored) / total_open * 100) if total_open > 0 else 0
+
+    await websocket.send(json.dumps({
+        "type": "simulation_complete",
+        "goal_reached": goal_reached,
+        "tick": tick,
+        "explored_cells": len(explored),
+        "total_cells": total_open,
+        "explored_pct": round(explored_pct, 1)
+    }))
 
 # -------------------------
 # Main entry point

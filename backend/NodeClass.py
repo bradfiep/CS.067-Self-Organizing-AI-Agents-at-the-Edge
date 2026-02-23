@@ -93,14 +93,6 @@ class Node:
         self.local_map[position] = set()
         print(f"{self.name} starting at {position}")
 
-        self.send_activity_log(
-            "agent_registered",
-            {
-                "position": list(position),
-                "status": "exploring"
-            }
-        )
-
     def _manhattan_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
         """Calculate Manhattan distance between two positions."""
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
@@ -457,24 +449,24 @@ class Node:
                 self.target_frontier = selected
                 self._broadcast_frontier_claim(selected)
                 print(f"{self.name} selected frontier {selected}")
+                self.send_activity_log("agent_frontier", {"frontier": list(selected)})
         
         # MOVE: Take one step toward target
         if self.target_frontier:
             new_pos = self._move_toward_target()
             if new_pos != self.current_position:
-                self.send_activity_log(
-                    "agent_move",
-                    {
-                        "from_position": list(self.current_position),
-                        "to_position": list(new_pos)
-                    }
-                )
                 self.current_position = new_pos
+                # Ensure newly visited position is in local_map
+                if self.current_position not in self.local_map:
+                    self.local_map[self.current_position] = set()
                 print(f"{self.name} moved to {new_pos}")
             else:
                 # Reached frontier or stuck
                 if new_pos == self.target_frontier:
                     print(f"{self.name} reached target frontier {self.target_frontier}")
+                    # Add reached frontier to local_map
+                    if self.target_frontier not in self.local_map:
+                        self.local_map[self.target_frontier] = set()
                     self.target_frontier = None
     
     def process_message(self, msg: str):
@@ -488,6 +480,11 @@ class Node:
             payload = json.loads(msg)
             msg_type = payload.get("type")
             
+            # These types are for the frontend bridge only — ignore silently
+            BRIDGE_ONLY_TYPES = {"agent_registered", "agent_move", "info", "agent_frontier"}
+            if msg_type in BRIDGE_ONLY_TYPES:
+                return
+        
             if msg_type == "MERGE":
                 self._process_merge_packet(payload)
             elif msg_type == "CLAIM":
