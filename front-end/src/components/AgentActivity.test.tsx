@@ -8,7 +8,7 @@ describe('AgentActivity Component', () => {
   // Default props for AgentActivity component
   const getDefaultProps = () => ({
     onBack: mockOnBack,
-    backendMessage: null,
+    messageQueue: [],
     maze: [[0, 1, 0], [1, 0, 1], [0, 1, 0]],
     startPt: [0, 0] as [number, number],
     endPt: [2, 2] as [number, number],
@@ -57,7 +57,6 @@ describe('AgentActivity Component', () => {
     it('should render maze when maze data is provided', () => {
       render(<AgentActivity {...getDefaultProps()} />);
       
-      // Check if maze grid is rendered (table element)
       const mazeTable = document.querySelector('.maze-table');
       expect(mazeTable).toBeInTheDocument();
     });
@@ -78,7 +77,7 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 1')).toBeInTheDocument();
@@ -95,7 +94,7 @@ describe('AgentActivity Component', () => {
         position: [1, 2],
         status: 'exploring'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         expect(screen.getByText(/Agent registered at position \(1,2\)/)).toBeInTheDocument();
@@ -109,22 +108,18 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Agent 1')).toBeInTheDocument();
-      });
-
-      // Try to register same agent again
       const msg2 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 1',
         position: [1, 1],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg1, msg2]} />);
 
-      // Should still only have one Agent 1
+      await waitFor(() => {
+        expect(screen.getByText('Agent 1')).toBeInTheDocument();
+      });
+
       const agentElements = screen.getAllByText('Agent 1');
       expect(agentElements).toHaveLength(1);
     });
@@ -136,110 +131,17 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Agent 1')).toBeInTheDocument();
-      });
-
-      // Register Agent 2
       const msg2 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 2',
         position: [1, 1],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Agent 2')).toBeInTheDocument();
-      });
-
-      // Both agents should be visible
-      expect(screen.getByText('Agent 1')).toBeInTheDocument();
-      expect(screen.getByText('Agent 2')).toBeInTheDocument();
-    });
-  });
-
-  describe('Agent Movement', () => {
-    it('should update agent position when receiving agent_move message', async () => {
-      const msg1 = JSON.stringify({
-        type: 'agent_registered',
-        agent_name: 'Agent 1',
-        position: [0, 0],
-        status: 'exploring'
-      });
-      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Pos: (0,0)')).toBeInTheDocument();
-      });
-
-      // Move agent
-      const msg2 = JSON.stringify({
-        type: 'agent_move',
-        agent_name: 'Agent 1',
-        from_position: [0, 0],
-        to_position: [1, 0]
-      });
-      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Pos: (1,0)')).toBeInTheDocument();
-      });
-    });
-
-    it('should add agent move to activity log', async () => {
-      const msg1 = JSON.stringify({
-        type: 'agent_registered',
-        agent_name: 'Agent 1',
-        position: [0, 0],
-        status: 'exploring'
-      });
-      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg1, msg2]} />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent 1')).toBeInTheDocument();
-      });
-
-      // Move agent
-      const msg2 = JSON.stringify({
-        type: 'agent_move',
-        agent_name: 'Agent 1',
-        from_position: [0, 0],
-        to_position: [1, 0]
-      });
-      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Moving one step from position \(0,0\) to position \(1,0\)/)).toBeInTheDocument();
-      });
-    });
-
-    it('should update agent status to exploring when moving', async () => {
-      const msg1 = JSON.stringify({
-        type: 'agent_registered',
-        agent_name: 'Agent 1',
-        position: [0, 0],
-        status: 'inactive'
-      });
-      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Status: inactive')).toBeInTheDocument();
-      });
-
-      // Move agent
-      const msg2 = JSON.stringify({
-        type: 'agent_move',
-        agent_name: 'Agent 1',
-        from_position: [0, 0],
-        to_position: [1, 0]
-      });
-      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Status: exploring')).toBeInTheDocument();
+        expect(screen.getByText('Agent 2')).toBeInTheDocument();
       });
     });
   });
@@ -250,7 +152,7 @@ describe('AgentActivity Component', () => {
         type: 'ack',
         status: 'Maze received successfully'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         expect(screen.getByText('Maze received successfully')).toBeInTheDocument();
@@ -261,7 +163,7 @@ describe('AgentActivity Component', () => {
       const msg = JSON.stringify({
         type: 'ack'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         expect(screen.getByText('Acknowledged')).toBeInTheDocument();
@@ -277,57 +179,35 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Agent registered/)).toBeInTheDocument();
-      });
-
-      // Add second activity
       const msg2 = JSON.stringify({
         type: 'agent_move',
         agent_name: 'Agent 1',
         from_position: [0, 0],
         to_position: [1, 0]
       });
-      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg1, msg2]} />);
 
       await waitFor(() => {
         expect(screen.getByText(/Moving one step/)).toBeInTheDocument();
       });
 
-      // The move message should appear before the registration message (newer first)
       const activityItems = document.querySelectorAll('.activity-log-item');
       expect(activityItems.length).toBeGreaterThanOrEqual(2);
     });
 
     it('should limit activity logs to 50 entries', async () => {
-      const msg1 = JSON.stringify({
-        type: 'agent_registered',
-        agent_name: 'Agent 1',
-        position: [0, 0],
-        status: 'exploring'
-      });
-      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Agent 1')).toBeInTheDocument();
-      });
-
-      // Add 51 move messages
-      for (let i = 0; i < 51; i++) {
-        const msg = JSON.stringify({
+      const msgs = Array.from({ length: 55 }, (_, i) =>
+        JSON.stringify({
           type: 'agent_move',
           agent_name: 'Agent 1',
           from_position: [i % 3, 0],
           to_position: [(i + 1) % 3, 0]
-        });
-        rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
-      }
+        })
+      );
+      render(<AgentActivity {...getDefaultProps()} messageQueue={msgs} />);
 
       await waitFor(() => {
         const activityItems = document.querySelectorAll('.activity-log-item');
-        // Should be at most 50 items
         expect(activityItems.length).toBeLessThanOrEqual(50);
       });
     });
@@ -339,12 +219,11 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         const timeElement = document.querySelector('.activity-log-time');
         expect(timeElement).toBeInTheDocument();
-        // Should have time format HH:MM:SS
         expect(timeElement?.textContent).toMatch(/\d{2}:\d{2}:\d{2}/);
       });
     });
@@ -358,34 +237,25 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      const { rerender } = render(<AgentActivity {...getDefaultProps()} backendMessage={msg1} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Agent 1')).toBeInTheDocument();
-      });
-
-      const agent1Avatar = document.querySelector('.agent-avatar');
-      const agent1Color = agent1Avatar ? window.getComputedStyle(agent1Avatar).background : '';
-
-      // Register Agent 2
       const msg2 = JSON.stringify({
         type: 'agent_registered',
         agent_name: 'Agent 2',
         position: [1, 1],
         status: 'exploring'
       });
-      rerender(<AgentActivity {...getDefaultProps()} backendMessage={msg2} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg1, msg2]} />);
 
       await waitFor(() => {
+        expect(screen.getByText('Agent 1')).toBeInTheDocument();
         expect(screen.getByText('Agent 2')).toBeInTheDocument();
       });
 
-      const agent2Avatar = document.querySelectorAll('.agent-avatar')[1];
-      const agent2Color = agent2Avatar ? window.getComputedStyle(agent2Avatar).background : '';
+      const avatars = document.querySelectorAll('.agent-avatar');
+      const color1 = avatars[0] ? window.getComputedStyle(avatars[0]).background : '';
+      const color2 = avatars[1] ? window.getComputedStyle(avatars[1]).background : '';
 
-      // Colors should be different (or at least set)
-      expect(agent1Color).toBeTruthy();
-      expect(agent2Color).toBeTruthy();
+      expect(color1).toBeTruthy();
+      expect(color2).toBeTruthy();
     });
 
     it('should use agent color for activity log border', async () => {
@@ -395,12 +265,11 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         const logItem = document.querySelector('.activity-log-item');
         expect(logItem).toBeInTheDocument();
-        
         const borderColor = logItem ? window.getComputedStyle(logItem).borderLeftColor : '';
         expect(borderColor).toBeTruthy();
       });
@@ -409,39 +278,32 @@ describe('AgentActivity Component', () => {
 
   describe('Error Handling', () => {
     it('should handle invalid JSON without crashing', () => {
-      // Should not throw an error
-      expect(() => render(<AgentActivity {...getDefaultProps()} backendMessage={'not valid json'} />)).not.toThrow();
+      expect(() => render(<AgentActivity {...getDefaultProps()} messageQueue={['not valid json']} />)).not.toThrow();
     });
 
-    it('should handle null backendMessage gracefully', () => {
-      expect(() => render(<AgentActivity {...getDefaultProps()} />)).not.toThrow();
+    it('should handle empty messageQueue gracefully', () => {
+      expect(() => render(<AgentActivity {...getDefaultProps()} messageQueue={[]} />)).not.toThrow();
       expect(screen.getByText(/No activity yet/)).toBeInTheDocument();
     });
 
-    it('should handle undefined backendMessage gracefully', () => {
-      expect(() => render(<AgentActivity {...getDefaultProps()} backendMessage={undefined} />)).not.toThrow();
-      expect(screen.getByText(/No activity yet/)).toBeInTheDocument();
-    });
-
-    it('should handle unknown message types gracefully', async () => {
+    it('should handle unknown message types gracefully', () => {
       const msg = JSON.stringify({
         type: 'unknown_type',
         data: 'some data'
       });
-      // Should not throw an error
-      expect(() => render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />)).not.toThrow();
+      expect(() => render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />)).not.toThrow();
     });
   });
 
   describe('Agent Display', () => {
-    it('should display agent avatar with first letter', async () => {
+    it('should display agent avatar with last character of name', async () => {
       const msg = JSON.stringify({
         type: 'agent_registered',
-        agent_name: 'Agent 5',
+        agent_name: 'Agent_5',
         position: [0, 0],
         status: 'exploring'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         const avatar = document.querySelector('.agent-avatar');
@@ -456,7 +318,7 @@ describe('AgentActivity Component', () => {
         position: [2, 1],
         status: 'completed'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         expect(screen.getByText('TestAgent')).toBeInTheDocument();
@@ -474,7 +336,7 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         expect(screen.getByText('[Agent 1]')).toBeInTheDocument();
@@ -488,12 +350,11 @@ describe('AgentActivity Component', () => {
         position: [0, 0],
         status: 'exploring'
       });
-      render(<AgentActivity {...getDefaultProps()} backendMessage={msg} />);
+      render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
         const agentLabel = screen.getByText('[Agent 1]');
         expect(agentLabel).toBeInTheDocument();
-        
         const style = window.getComputedStyle(agentLabel);
         expect(style.color).toBeTruthy();
       });

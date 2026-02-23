@@ -1,6 +1,5 @@
 // src/components/AgentActivity.tsx
-import { useState, useEffect } from 'react';
-import Button from './Button';
+import { useState, useEffect, useRef } from 'react';import Button from './Button';
 import MazeGrid from './MazeGrid';
 
 // Type definitions
@@ -18,15 +17,29 @@ interface ActivityLog {
   agentId: string;
   agentName: string;
   message: string;
-  type: 'move' | 'info';
+  type: 'move' | 'info' | 'success' | 'error';
 }
 
 interface AgentActivityProps {
   onBack: () => void;
-  backendMessage?: string | null;
+  messageQueue: string[];
   maze: number[][] | null;
   startPt: [number, number];
   endPt: [number, number];
+}
+
+interface BackendMessage {
+  type: string;
+  agent_name?: string;
+  agent_id?: string;
+  position?: [number, number];
+  frontier?: [number, number];
+  from_position?: [number, number];
+  to_position?: [number, number];
+  status?: string;
+  goal_reached?: boolean;
+  ticks?: number;
+  explored_pct?: number;
 }
 
 // Agent list item component
@@ -67,7 +80,7 @@ function ActivityFeedItem({ log, agents }: { log: ActivityLog; agents: Agent[] }
 
 export default function AgentActivity({
   onBack,
-  backendMessage,
+  messageQueue,
   maze,
   startPt,
   endPt
@@ -75,95 +88,142 @@ export default function AgentActivity({
   // Initialize agents with placeholder data
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const processedCount = useRef(0);
 
-  // Process backend messages
-  useEffect(() => {
-    if (!backendMessage) return;
-
-    try {
-      const data = JSON.parse(backendMessage);
-      
-      const timestamp = new Date().toLocaleTimeString('en-US', { 
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-
-      // Handle agent_registered message
-      if (data.type === 'agent_registered') {
-        const newAgent: Agent = {
-          id: data.agent_name.toLowerCase().replace(' ', '-'),
-          name: data.agent_name,
-          position: data.position,
-          status: data.status as 'exploring' | 'inactive' | 'completed',
-          color: assignAgentColor(data.agent_name)
-        };
-
-        // Add agent if not already in list
-        setAgents(prev => {
-          const exists = prev.some(a => a.id === newAgent.id);
-          if (exists) return prev;
-          return [...prev, newAgent];
-        });
-
-        // Add to activity log
-        const newLog: ActivityLog = {
-          id: `log-${Date.now()}-${Math.random()}`,
-          timestamp,
-          agentId: newAgent.id,
-          agentName: data.agent_name,
-          message: `Agent registered at position (${data.position[0]},${data.position[1]})`,
-          type: 'info'
-        };
-        setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
-      }
-      
-      // Handle agent_move message
-      else if (data.type === 'agent_move') {
-        // Update agent position
-        setAgents(prev => prev.map(agent => {
-          if (agent.name === data.agent_name) {
-            return { ...agent, position: data.to_position, status: 'exploring' };
-          }
-          return agent;
-        }));
-
-        // Add to activity log
-        const newLog: ActivityLog = {
-          id: `log-${Date.now()}-${Math.random()}`,
-          timestamp,
-          agentId: data.agent_name.toLowerCase().replace(' ', '-'),
-          agentName: data.agent_name,
-          message: `Moving one step from position (${data.from_position[0]},${data.from_position[1]}) to position (${data.to_position[0]},${data.to_position[1]})`,
-          type: 'move'
-        };
-        setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
-      }
-      // Handle ACK messages
-      else if (data.type === 'ack') {
-        const newLog: ActivityLog = {
-          id: `log-${Date.now()}-${Math.random()}`,
-          timestamp,
-          agentId: 'system',
-          agentName: 'System',
-          message: data.status || 'Acknowledged',
-          type: 'info'
-        };
-        setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
-      }
-    } catch (err) {
-      console.error('Error parsing backend message:', err);
-    }
-  }, [backendMessage]);
-
-  // Helper function to assign colors to agents
   const assignAgentColor = (agentName: string): string => {
     const colors = ['#297AEB', '#F28B1E', '#f8d32b', '#9718ad', '#e74337', '#1AB74E'];
     const agentNumber = agentName.match(/\d+/)?.[0] || agentName.charCodeAt(agentName.length - 1);
     const index = (typeof agentNumber === 'string' ? parseInt(agentNumber) : agentNumber) % colors.length;
     return colors[index];
   };
+
+  const processMessage = (data: BackendMessage, timestamp: string) => {
+    if (data.type === 'agent_registered') {
+      if (!data.agent_name || !data.position) return;
+      const newAgent: Agent = {
+        id: data.agent_name.toLowerCase().replace(' ', '-'),
+        name: data.agent_name,
+        position: data.position,
+        status: data.status as 'exploring' | 'inactive' | 'completed',
+        color: assignAgentColor(data.agent_name)
+      };
+      setAgents(prev => {
+        const exists = prev.some(a => a.id === newAgent.id);
+        if (exists) return prev;
+        return [...prev, newAgent];
+      });
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        timestamp,
+        agentId: newAgent.id,
+        agentName: data.agent_name,
+        message: `Agent registered at position (${data.position[0]},${data.position[1]})`,
+        type: 'info'
+      };
+      setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+
+    else if (data.type === 'agent_move') {
+      if (!data.agent_name || !data.from_position || !data.to_position) return;
+      setAgents(prev => prev.map(agent =>
+        agent.name === data.agent_name
+          ? { ...agent, status: 'exploring', position: data.to_position! }
+          : agent
+      ));
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        timestamp,
+        agentId: data.agent_name.toLowerCase().replace(' ', '-'),
+        agentName: data.agent_name,
+        message: `Moving one step from (${data.from_position[0]},${data.from_position[1]}) to (${data.to_position[0]},${data.to_position[1]})`,
+        type: 'move'
+      };
+      setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+
+    else if (data.type === 'agent_frontier') {
+      if (!data.agent_name || !data.frontier) return;
+      setAgents(prev => prev.map(agent =>
+        agent.name === data.agent_name && agent.status !== 'completed'
+          ? { ...agent, status: 'exploring', position: data.frontier! }
+          : agent
+      ));
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        timestamp,
+        agentId: data.agent_name.toLowerCase().replace(' ', '-'),
+        agentName: data.agent_name,
+        message: `Exploring frontier (${data.frontier[0]},${data.frontier[1]})`,
+        type: 'move'
+      };
+      setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+
+    else if (data.type === 'agent_goal_reached') {
+      if (!data.agent_name || !data.position) return;
+      setAgents(prev => prev.map(agent =>
+        agent.name === data.agent_name
+          ? { ...agent, status: 'completed', position: data.position! }
+          : agent
+      ));
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        timestamp,
+        agentId: data.agent_name.toLowerCase().replace(' ', '-'),
+        agentName: data.agent_name,
+        message: `Reached goal (${data.position[0]},${data.position[1]}) ✓`,
+        type: 'success'
+      };
+      setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+
+    else if (data.type === 'simulation_complete') {
+      const result = data.goal_reached ? 'Success' : 'Failed';
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        timestamp,
+        agentId: 'system',
+        agentName: 'System',
+        message: `${result} — ${data.ticks} ticks, ${data.explored_pct}% explored`,
+        type: data.goal_reached ? 'success' : 'error'
+      };
+      setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+
+    else if (data.type === 'ack') {
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        timestamp,
+        agentId: 'system',
+        agentName: 'System',
+        message: data.status || 'Acknowledged',
+        type: 'info'
+      };
+      setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+  };
+
+  useEffect(() => {
+    const unprocessed = messageQueue.slice(processedCount.current);
+    if (unprocessed.length === 0) return;
+
+    unprocessed.forEach(msg => {
+      try {
+        const data = JSON.parse(msg);
+        const timestamp = new Date().toLocaleTimeString('en-US', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        processMessage(data, timestamp);
+      } catch (err) {
+        console.error('Error parsing backend message:', err);
+      }
+    });
+
+    processedCount.current = messageQueue.length;
+  }, [messageQueue]);
 
   return (
     <div className="activity-section">
