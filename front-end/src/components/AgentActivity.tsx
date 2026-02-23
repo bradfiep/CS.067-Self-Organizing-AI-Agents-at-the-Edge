@@ -1,6 +1,9 @@
 // src/components/AgentActivity.tsx
-import { useState, useEffect, useRef } from 'react';import Button from './Button';
+import { useState, useEffect, useRef } from 'react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import Button from './Button';
 import MazeGrid from './MazeGrid';
+import FullscreenMaze from './FullscreenMaze';
 
 // Type definitions
 interface Agent {
@@ -78,6 +81,11 @@ function ActivityFeedItem({ log, agents }: { log: ActivityLog; agents: Agent[] }
   );
 }
 
+// Expand Icon Component
+function ExpandIcon() {
+  return <i className="bi bi-arrows-angle-expand" style={{ fontSize: '20px' }}></i>;
+}
+
 export default function AgentActivity({
   onBack,
   messageQueue,
@@ -88,6 +96,7 @@ export default function AgentActivity({
   // Initialize agents with placeholder data
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [isFullscreenMaze, setIsFullscreenMaze] = useState(false);
   const processedCount = useRef(0);
 
   const assignAgentColor = (agentName: string): string => {
@@ -178,16 +187,37 @@ export default function AgentActivity({
     }
 
     else if (data.type === 'simulation_complete') {
-      const result = data.goal_reached ? 'Success' : 'Failed';
+      const result = data.goal_reached ? 'Success ✓' : 'Failed ✗';
+      const ticks = data.ticks || data.tick || 'unknown';
+      const explored = data.explored_pct || Math.round((data.explored_cells / data.total_cells * 100)) || 0;
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
         agentId: 'system',
         agentName: 'System',
-        message: `${result} — ${data.ticks} ticks, ${data.explored_pct}% explored`,
+        message: `Simulation ${result} — ${ticks} ticks, ${explored}% explored`,
         type: data.goal_reached ? 'success' : 'error'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+
+    else if (data.type === 'tick_update') {
+      // Update agent positions from the tick update
+      if (data.agents && Array.isArray(data.agents)) {
+        setAgents(prev => prev.map(agent => {
+          // Match by agent ID: frontend has "agent_0", backend sends id: 0
+          const agentNumericId = parseInt(agent.id.split('_')[1]);
+          const updatedAgentData = data.agents.find((a: any) => a.id === agentNumericId);
+          
+          if (updatedAgentData && updatedAgentData.position) {
+            return {
+              ...agent,
+              position: updatedAgentData.position as [number, number]
+            };
+          }
+          return agent;
+        }));
+      }
     }
 
     else if (data.type === 'ack') {
@@ -247,10 +277,47 @@ export default function AgentActivity({
             </div>
 
             {/* Maze Preview Section */}
-            <div style={{ flex: 7, minHeight: 0 }}>
+            <div style={{ flex: 7, minHeight: 0, position: 'relative' }}>
               <div className="activity-maze-preview">
                 {maze ? (
-                  <MazeGrid maze={maze} start={startPt} end={endPt} />
+                  <>
+                    <MazeGrid maze={maze} start={startPt} end={endPt} agents={agents} />
+                    <button
+                      onClick={() => setIsFullscreenMaze(true)}
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: '#656565e8',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: 'bold',
+                        zIndex: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#777e8e8';
+                        e.currentTarget.style.transform = 'scale(1.15)';
+                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(119, 126, 142, 0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#656565e8';
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+                      }}
+                      title="Expand maze to fullscreen"
+                    >
+                      <ExpandIcon />
+                    </button>
+                  </>
                 ) : (
                   <div style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>
                     Maze Preview
@@ -294,6 +361,17 @@ export default function AgentActivity({
           Back
         </Button>
       </div>
+
+      {/* Fullscreen Maze Modal */}
+      {isFullscreenMaze && (
+        <FullscreenMaze
+          maze={maze}
+          startPt={startPt}
+          endPt={endPt}
+          agents={agents}
+          onClose={() => setIsFullscreenMaze(false)}
+        />
+      )}
     </div>
   );
 }

@@ -456,11 +456,17 @@ class Node:
             new_pos = self._move_toward_target()
             if new_pos != self.current_position:
                 self.current_position = new_pos
+                # Ensure newly visited position is in local_map
+                if self.current_position not in self.local_map:
+                    self.local_map[self.current_position] = set()
                 print(f"{self.name} moved to {new_pos}")
             else:
                 # Reached frontier or stuck
                 if new_pos == self.target_frontier:
                     print(f"{self.name} reached target frontier {self.target_frontier}")
+                    # Add reached frontier to local_map
+                    if self.target_frontier not in self.local_map:
+                        self.local_map[self.target_frontier] = set()
                     self.target_frontier = None
     
     def process_message(self, msg: str):

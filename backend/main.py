@@ -83,6 +83,10 @@ async def broadcast(message):
 async def run_live_simulation(maze, start, end, websocket):
     # 1. Spawn the swarm using your existing spawner logic
     agents = spawn_agents(maze, tuple(start))
+    
+    # Start UDP listeners for all agents so they can communicate with each other
+    listener_tasks = [asyncio.create_task(agent.web_listen()) for agent in agents]
+    
     # Register agents for frontend agent list
     for agent in agents:
         await websocket.send(json.dumps({
@@ -118,6 +122,16 @@ async def run_live_simulation(maze, start, end, websocket):
                     "agent_name": agent.name,
                     "agent_id": agent.agent_id,
                     "position": list(agent.current_position),
+                    "tick": tick
+                }))
+            
+            # Send frontier message 
+            if agent.target_frontier:
+                await websocket.send(json.dumps({
+                    "type": "agent_frontier",
+                    "agent_name": agent.name,
+                    "agent_id": agent.agent_id,
+                    "frontier": list(agent.target_frontier),
                     "tick": tick
                 }))
             

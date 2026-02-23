@@ -12,6 +12,7 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "bootstrap-icons": "^1.13.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "yarn": "^1.22.22"
