@@ -168,7 +168,7 @@ async def run_live_simulation(maze, start, end, websocket):
     await websocket.send(json.dumps({
         "type": "simulation_complete",
         "goal_reached": goal_reached,
-        "ticks": tick,
+        "tick": tick,
         "explored_cells": len(explored),
         "total_cells": total_open,
         "explored_pct": round(explored_pct, 1)

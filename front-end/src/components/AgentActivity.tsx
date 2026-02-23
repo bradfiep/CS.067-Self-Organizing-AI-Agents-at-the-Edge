@@ -1,5 +1,5 @@
 // src/components/AgentActivity.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import Button from './Button';
 import MazeGrid from './MazeGrid';
@@ -41,8 +41,18 @@ interface BackendMessage {
   to_position?: [number, number];
   status?: string;
   goal_reached?: boolean;
-  ticks?: number;
   explored_pct?: number;
+  tick?: number;
+  explored_cells?: number;
+  total_cells?: number;
+  agents?: TickAgent[];
+}
+
+interface TickAgent {
+  id: number;
+  position: [number, number];
+  target_frontier?: [number, number];
+  cells_discovered?: number;
 }
 
 // Agent list item component
@@ -99,14 +109,14 @@ export default function AgentActivity({
   const [isFullscreenMaze, setIsFullscreenMaze] = useState(false);
   const processedCount = useRef(0);
 
-  const assignAgentColor = (agentName: string): string => {
+  const assignAgentColor = useCallback((agentName: string): string => {
     const colors = ['#297AEB', '#F28B1E', '#f8d32b', '#9718ad', '#e74337', '#1AB74E'];
     const agentNumber = agentName.match(/\d+/)?.[0] || agentName.charCodeAt(agentName.length - 1);
     const index = (typeof agentNumber === 'string' ? parseInt(agentNumber) : agentNumber) % colors.length;
     return colors[index];
-  };
+  }, []);
 
-  const processMessage = (data: BackendMessage, timestamp: string) => {
+  const processMessage = useCallback((data: BackendMessage, timestamp: string) => {
     if (data.type === 'agent_registered') {
       if (!data.agent_name || !data.position) return;
       const newAgent: Agent = {
@@ -188,7 +198,7 @@ export default function AgentActivity({
 
     else if (data.type === 'simulation_complete') {
       const result = data.goal_reached ? 'Success ✓' : 'Failed ✗';
-      const ticks = data.ticks || data.tick || 'unknown';
+      const ticks = data.tick ?? 'unknown';
       const explored = data.explored_pct || Math.round((data.explored_cells / data.total_cells * 100)) || 0;
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
@@ -207,7 +217,10 @@ export default function AgentActivity({
         setAgents(prev => prev.map(agent => {
           // Match by agent ID: frontend has "agent_0", backend sends id: 0
           const agentNumericId = parseInt(agent.id.split('_')[1]);
-          const updatedAgentData = data.agents.find((a: any) => a.id === agentNumericId);
+          if (Number.isNaN(agentNumericId)) {
+            return agent;
+          }
+          const updatedAgentData = data.agents.find((a) => a.id === agentNumericId);
           
           if (updatedAgentData && updatedAgentData.position) {
             return {
@@ -231,7 +244,7 @@ export default function AgentActivity({
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
     }
-  };
+  }, [assignAgentColor]);
 
   useEffect(() => {
     const unprocessed = messageQueue.slice(processedCount.current);
@@ -253,7 +266,7 @@ export default function AgentActivity({
     });
 
     processedCount.current = messageQueue.length;
-  }, [messageQueue]);
+  }, [messageQueue, processMessage]);
 
   return (
     <div className="activity-section">
