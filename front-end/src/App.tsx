@@ -30,28 +30,17 @@ function App() {
   const wsUrl = import.meta.env.VITE_WEBSOCKET_URL;
 
   useEffect(() => {
-    ws.current = new WebSocket(wsUrl)
-    ws.current.onopen = () => console.log("WebSocket connected");
-    ws.current.onclose = () => console.log("WebSocket disconnected");
-    ws.current.onerror = (err) => console.error("WebSocket error", err);
-
-    return () => {
-      ws.current?.close();
-    };
-  }, [wsUrl]);
-
-  useEffect(() => {
     ws.current = new WebSocket(wsUrl);
-  
+    
     ws.current.onopen = () => console.log("WebSocket connected");
     ws.current.onclose = () => console.log("WebSocket disconnected");
     ws.current.onerror = (err) => console.error("WebSocket error", err);
-  
+    
     ws.current.onmessage = (event) => {
       console.log("Received from backend:", event.data);
       setMessageQueue(prev => [...prev, event.data]);
     };
-  
+
     return () => {
       ws.current?.close();
     };
