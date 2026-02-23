@@ -228,6 +228,11 @@ export default function AgentActivity({
         setCurrentTick(data.tick);
       }
       
+      // Update exploration percentage
+      if (data.explored_pct !== undefined) {
+        setExploredPct(data.explored_pct);
+      }
+      
       // Update agent positions from the tick update
       if (Array.isArray(data.agents)) {
         const tickAgents = data.agents;

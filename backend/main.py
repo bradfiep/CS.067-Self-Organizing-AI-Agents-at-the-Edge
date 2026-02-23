@@ -133,11 +133,19 @@ async def run_live_simulation(maze, start, end, websocket):
                 "cells_discovered": len(agent.local_map)
             })
 
+        # Calculate exploration percentage
+        explored = set()
+        for agent in agents:
+            explored.update(agent.local_map.keys())
+        total_open = sum(1 for row in maze for cell in row if cell == 0)
+        explored_pct = (len(explored) / total_open * 100) if total_open > 0 else 0
+
         # 3. Create the JSON payload for the frontend
         payload = {
             "type": "tick_update",
             "tick": tick,
             "goal_reached": goal_reached,
+            "explored_pct": round(explored_pct, 1),
             "agents": agent_data
         }
         
