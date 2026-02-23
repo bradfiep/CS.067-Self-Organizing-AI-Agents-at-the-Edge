@@ -45,7 +45,8 @@ class Node:
         self.local_map: Dict[Tuple[int, int], Set[Tuple[int, int]]] = {}
         self.frontiers: List[Tuple[int, int]] = []
         self.target_frontier: Optional[Tuple[int, int]] = None
-        self.claimed_frontiers: Set[Tuple[int, int]] = set()
+        # Map frontier coord -> agent_id that claimed it (lowest ID wins)
+        self.claimed_frontiers: Dict[Tuple[int, int], int] = {}
         
         # Current position
         self.current_position: Optional[Tuple[int, int]] = None
@@ -104,12 +105,60 @@ class Node:
         """Calculate Manhattan distance between two positions."""
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
     
+    def _get_bfs_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
+        """
+        Calculate true path distance using BFS on the local_map.
+        
+        This solves the 'Commute Problem': frontiers that look close in Manhattan distance
+        but require walking around walls are now properly evaluated at their true cost.
+        
+        Args:
+            pos1: Starting position
+            pos2: Target position (usually a frontier)
+        
+        Returns:
+            Number of steps to reach pos2 from pos1 through known map.
+            Returns 999999 if pos2 is unreachable.
+        """
+        if pos1 == pos2:
+            return 0
+        
+        # BFS queue: stores (current_pos, distance)
+        queue = deque([(pos1, 0)])
+        visited = {pos1}
+        
+        # Directions: North, South, East, West
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        
+        while queue:
+            current, distance = queue.popleft()
+            
+            # Check if we reached the target
+            if current == pos2:
+                return distance
+            
+            cx, cy = current
+            
+            # Explore 4-way grid neighbors
+            for dx, dy in directions:
+                neighbor = (cx + dx, cy + dy)
+                
+                if neighbor not in visited:
+                    # Valid path rule: neighbor must be in local_map OR be the exact target
+                    if neighbor in self.local_map or neighbor == pos2:
+                        visited.add(neighbor)
+                        queue.append((neighbor, distance + 1))
+        
+        # No path found to target - unreachable
+        return 999999
+    
+    
     def _select_best_frontier(self) -> Optional[Tuple[int, int]]:
         """
-        Select a frontier to explore using jiggle logic.
+        Select a frontier to explore using jiggle logic with BFS distance.
         
         Strategy:
-        1. Find top 3 nearest unclaimed frontiers
+        1. Find top 3 nearest unclaimed frontiers (using true path distance via BFS)
         2. Randomly pick one (prevents deterministic clumping)
         3. If no unclaimed, pick a random claimed frontier (helps break deadlock)
         4. If no frontiers at all, return None
@@ -126,10 +175,10 @@ class Node:
         unclaimed = [f for f in self.frontiers if f not in self.claimed_frontiers]
         
         if unclaimed:
-            # Find top 3 nearest unclaimed frontiers
-            sorted_unclaimed = sorted(unclaimed, key=lambda f: self._manhattan_distance(self.current_position, f))
+            # Find top 3 nearest unclaimed frontiers using TRUE path distance (BFS)
+            sorted_unclaimed = sorted(unclaimed, key=lambda f: self._get_bfs_distance(self.current_position, f))
             top_3 = sorted_unclaimed[:min(3, len(sorted_unclaimed))]
-            # Randomly pick one of the top 3
+            # Randomly pick one of the top 3 (jiggle logic prevents deterministic clumping)
             return random.choice(top_3)
         else:
             # No unclaimed frontiers - pick random claimed one to help break deadlock
@@ -137,49 +186,89 @@ class Node:
                 return random.choice(self.frontiers)
             return None
     
+    def _find_next_step_bfs(self, target: Tuple[int, int]) -> Optional[Tuple[int, int]]:
+        """
+        Use BFS on local_map to find the next immediate step toward target.
+        """
+        if target == self.current_position:
+            return None
+        
+        # BFS queue: stores (current_pos, path_to_reach_it)
+        queue = deque([(self.current_position, [self.current_position])])
+        visited = {self.current_position}
+        
+        # Directions: North, South, West, East
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        
+        while queue:
+            current, path = queue.popleft()
+            
+            # Check if we reached the target
+            if current == target:
+                # Return the first step in the path (index 1)
+                if len(path) > 1:
+                    return path[1]
+                return None
+            
+            cx, cy = current
+            
+            # Explore 4-way grid neighbors
+            for dx, dy in directions:
+                neighbor = (cx + dx, cy + dy)
+                
+                if neighbor not in visited:
+                    # VALID PATH RULE:
+                    # We can walk on it IF it is a fully explored node (in local_map)
+                    # OR if it is the exact target frontier we are trying to step onto.
+                    if neighbor in self.local_map or neighbor == target:
+                        visited.add(neighbor)
+                        queue.append((neighbor, path + [neighbor]))
+        
+        # No path found to target
+        return None
+    
     def _move_toward_target(self) -> Tuple[int, int]:
         """
-        Calculate the next step toward target_frontier using Manhattan distance.
-        Prefers moving horizontally first, then vertically.
-        Detects when stuck and forces exploration of new frontiers.
+        Calculate the next step toward target_frontier using BFS on local_map.
+        
+        Algorithm:
+        1. Use BFS to find shortest path from current position to target
+        2. Only traverse nodes that exist in self.local_map (discovered nodes)
+        3. Return the immediate next step (not the whole path)
+        4. If no path exists, drop the target and increment stuck_counter
         
         Returns:
-            New (x,y) position (may be same as current if blocked)
+            New (x,y) position to move to
         """
         import random
         
         if not self.target_frontier or not self.current_position:
             return self.current_position
         
-        cx, cy = self.current_position
-        tx, ty = self.target_frontier
+        # Ensure current position is in local_map
+        if self.current_position not in self.local_map:
+            self.local_map[self.current_position] = set()
         
-        # Decide which direction to move
-        if cx < tx:
-            new_pos = (cx + 1, cy)
-        elif cx > tx:
-            new_pos = (cx - 1, cy)
-        elif cy < ty:
-            new_pos = (cx, cy + 1)
-        elif cy > ty:
-            new_pos = (cx, cy - 1)
-        else:
-            # Already at target
-            return self.current_position
+        # Try to find next step using BFS
+        next_step = self._find_next_step_bfs(self.target_frontier)
         
-        # Check if we actually moved
-        if new_pos == self.current_position:
+        if next_step is None:
+            # No path to target found - target is walled off or unreachable
+            print(f"{self.name} cannot reach target {self.target_frontier}. Dropping target.")
+            self.target_frontier = None
             self.stuck_counter += 1
-        else:
-            self.stuck_counter = 0
-        
-        # If stuck too long, pick a random frontier to escape deadlock
-        if self.stuck_counter > 5:
-            if self.frontiers:
+            
+            # If stuck too long, pick a random frontier
+            if self.stuck_counter > 5 and self.frontiers:
                 self.target_frontier = random.choice(self.frontiers)
                 self.stuck_counter = 0
+            
+            return self.current_position
         
-        return new_pos
+        # Successfully found a next step
+        self.stuck_counter = 0
+        return next_step
+    
     
     def _is_wall(self, cell_value: int) -> bool:
         """Check if a cell value represents a wall (1 = wall)."""
@@ -188,13 +277,6 @@ class Node:
     def _scan_neighbors(self, local_grid_view: List[List[int]]) -> List[Tuple[int, int]]:
         """
         Scan 4-neighbors in the local grid view and identify frontiers.
-        Updates local_map and returns list of new frontiers found.
-        
-        Args:
-            local_grid_view: 2D array where 0=open, 1=wall
-        
-        Returns:
-            List of new frontier coordinates
         """
         if not self.current_position:
             return []
@@ -203,11 +285,11 @@ class Node:
         cx, cy = self.current_position
         rows, cols = len(local_grid_view), len(local_grid_view[0])
         
-        # Ensure current position is in local_map
+        # Ensure current position is registered
         if self.current_position not in self.local_map:
             self.local_map[self.current_position] = set()
         
-        # Check 4 neighbors (up, down, left, right)
+        # Check 4 neighbors
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nx, ny = cx + dx, cy + dy
             
@@ -221,19 +303,13 @@ class Node:
             if self._is_wall(cell):
                 continue
             
-            # Check if this is a new frontier (neighbor not yet in local_map)
+            # Check if this open space is a new frontier
             if (nx, ny) not in self.local_map:
-                # This is a frontier - reachable but unexplored
                 if (nx, ny) not in self.frontiers:
                     self.frontiers.append((nx, ny))
                     new_frontiers.append((nx, ny))
-            else:
-                # Already explored, just update edges
-                self.local_map[self.current_position].add((nx, ny))
-                self.local_map[(nx, ny)].add(self.current_position)
         
         return new_frontiers
-    
     def _broadcast_map_update(self, new_nodes: List[Tuple[int, int]], new_frontiers: List[Tuple[int, int]]):
         """
         Broadcast map update via UDP to all peer agents.
@@ -307,17 +383,26 @@ class Node:
     def _process_claim_packet(self, payload: Dict):
         """
         Process incoming CLAIM packet and update claimed frontiers.
+        Uses agent ID hierarchy: lowest ID wins claim ownership.
         
         Args:
-            payload: Dictionary with 'target_frontier'
+            payload: Dictionary with 'target_frontier' and 'sender_id'
         """
         sender = payload.get("sender_name", "Unknown")
+        sender_id = payload.get("sender_id", 999)
         frontier = payload.get("target_frontier")
         
         if frontier:
             frontier_tuple = tuple(frontier) if isinstance(frontier, list) else frontier
-            self.claimed_frontiers.add(frontier_tuple)
-            print(f"{self.name} recorded frontier claim from {sender}: {frontier_tuple}")
+            
+            # Only update if frontier not claimed, or if new sender has lower ID (wins)
+            if frontier_tuple not in self.claimed_frontiers:
+                self.claimed_frontiers[frontier_tuple] = sender_id
+                print(f"{self.name} recorded frontier claim from {sender} (ID {sender_id}): {frontier_tuple}")
+            elif sender_id < self.claimed_frontiers[frontier_tuple]:
+                old_owner = self.claimed_frontiers[frontier_tuple]
+                self.claimed_frontiers[frontier_tuple] = sender_id
+                print(f"{self.name} updated frontier owner {frontier_tuple} from Agent_{old_owner} to {sender} (ID {sender_id})")
     
     def tick(self, local_grid_view: List[List[int]]):
         """
@@ -345,6 +430,14 @@ class Node:
         if self.target_frontier == self.current_position:
             self.target_frontier = None
         
+        # ANTI-LIVELOCK: Check claim hierarchy for current target
+        if self.target_frontier and self.target_frontier in self.claimed_frontiers:
+            owner_id = self.claimed_frontiers[self.target_frontier]
+            if owner_id < self.agent_id:
+                # Lower ID agent owns this, must yield it
+                print(f"{self.name} yielding frontier {self.target_frontier} to Agent_{owner_id} (lower ID)")
+                self.target_frontier = None
+        
         # SCAN: Identify new frontiers
         new_frontiers = self._scan_neighbors(local_grid_view)
         new_nodes = list(self.local_map.keys())  # All discovered nodes
@@ -356,9 +449,11 @@ class Node:
         # (This would be called from async handler in real implementation)
         
         # DECIDE: Select frontier if needed
-        if self.target_frontier is None or self.target_frontier in self.claimed_frontiers:
+        if self.target_frontier is None:
             selected = self._select_best_frontier()
             if selected:
+                # Claim locally FIRST to prevent race condition
+                self.claimed_frontiers[selected] = self.agent_id
                 self.target_frontier = selected
                 self._broadcast_frontier_claim(selected)
                 print(f"{self.name} selected frontier {selected}")
@@ -410,7 +505,7 @@ class Node:
         loop = asyncio.get_event_loop()
         while True:
             try:
-                data, addr = await loop.run_in_executor(None, self.sock.recvfrom, 1024)
+                data, addr = await loop.run_in_executor(None, self.sock.recvfrom, 65535)
                 msg = data.decode('utf-8')
                 print(f"[{self.name}] Received from {addr}: {msg}")
                 self.process_message(msg)
@@ -441,52 +536,3 @@ class Node:
         except Exception as e:
             print(f"{self.name} failed to save message: {e}")
 
-def main():
-    """Test the Node class with frontier-based exploration."""
-    
-    # Test maze
-    maze = [
-        [0, 1, 0, 0, 0],
-        [0, 1, 0, 1, 0],
-        [0, 0, 0, 1, 0],
-        [1, 1, 0, 0, 0],
-        [0, 0, 0, 1, 0]
-    ]
-    
-    start = (0, 0)
-    
-    # Create a test agent
-    agent = Node(port=9001, name="TestAgent", agent_id=1)
-    agent.set_initial_position(start)
-    
-    # Simulate a tick with a local grid view
-    print("\n--- FRONTIER-BASED EXPLORATION TEST ---")
-    
-    # Local view from starting position
-    local_view = [
-        [0, 1, 0],
-        [0, 1, 0],
-        [0, 0, 0]
-    ]
-    
-    print(f"\nTick 1:")
-    agent.tick(local_view)
-    print(f"Local map: {agent.local_map}")
-    print(f"Frontiers: {agent.frontiers}")
-    print(f"Target frontier: {agent.target_frontier}")
-    
-    print(f"\nTick 2 (simulating movement):")
-    agent.current_position = (0, 1)
-    local_view_2 = [
-        [0, 0, 0],
-        [1, 0, 1],
-        [0, 0, 1]
-    ]
-    agent.tick(local_view_2)
-    print(f"Local map: {agent.local_map}")
-    print(f"Frontiers: {agent.frontiers}")
-
-
-if __name__ == "__main__":
-    main()
-    print("NodeClass module test finished.")

@@ -10,13 +10,16 @@ This script:
 6. Runs for up to 200 ticks or until goal reached
 """
 
+
 import os
 import sys
 import time
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import List, Tuple, Set, Dict
 from spawner import spawn_agents
 from NodeClass import Node
-
+import contextlib
+import io
 
 # ============================================================================
 # TASK 1: Maze Definition & Setup
@@ -215,6 +218,124 @@ def print_metrics(agents: List[Node], maze: List[List[int]], tick: int, goal_rea
     print()
 
 
+def render_ascii_map_to_file(maze: List[List[int]], agents: List[Node], tick: int, start: Tuple[int, int], goal: Tuple[int, int], output_file):
+    """
+    Render the maze with agent positions and write to file.
+    
+    Symbols:
+    - '#' = Wall
+    - '.' = Unexplored open path
+    - '░' = Explored path (in any agent's local_map)
+    - '0'-'9' = Agent position (agent ID)
+    - 'S' = Start (if not occupied by agent)
+    - 'E' = End/Goal (if not occupied by agent)
+    
+    Args:
+        maze: Full maze grid
+        agents: List of agent objects
+        tick: Current tick number
+        start: Starting position
+        goal: Goal position
+        output_file: File object to write to
+    """
+    rows = len(maze)
+    cols = len(maze[0])
+    
+    # Build explored set (union of all agent local_maps)
+    explored_set: Set[Tuple[int, int]] = set()
+    for agent in agents:
+        explored_set.update(agent.local_map.keys())
+    
+    # Build agent position map
+    agent_pos_map: Dict[Tuple[int, int], Node] = {}
+    for agent in agents:
+        if agent.current_position:
+            agent_pos_map[agent.current_position] = agent
+    
+    # Write to file
+    output_file.write("\n" + "="*80 + "\n")
+    output_file.write(f"FIXED-SIZE FRONTIER SWARM EXPLORATION - TICK {tick}\n")
+    output_file.write("="*80 + "\n\n")
+    
+    for i in range(rows):
+        for j in range(cols):
+            pos = (i, j)
+            
+            # Priority: Agent > Goal > Start > Explored > Wall > Unexplored
+            if pos in agent_pos_map:
+                agent = agent_pos_map[pos]
+                output_file.write(str(agent.agent_id % 10) + " ")
+            elif pos == goal:
+                output_file.write("E ")
+            elif pos == start:
+                output_file.write("S ")
+            elif maze[i][j] == 1:
+                output_file.write("# ")
+            elif pos in explored_set:
+                output_file.write("░ ")
+            else:
+                output_file.write(". ")
+        output_file.write("\n")
+    
+    output_file.write("\n" + "="*80 + "\n")
+    output_file.write("Legend: # = Wall | . = Unexplored | ░ = Explored | S = Start | E = End | 0-9 = Agent ID\n")
+    output_file.write("="*80 + "\n")
+    output_file.flush()
+
+
+def print_metrics_to_file(agents: List[Node], maze: List[List[int]], tick: int, goal_reached: bool, total_open_cells: int, output_file):
+    """
+    Print simulation metrics to file.
+    
+    Args:
+        agents: List of agent objects
+        maze: Maze grid
+        tick: Current tick number
+        goal_reached: Whether any agent reached goal
+        total_open_cells: Total explorable cells in maze
+        output_file: File object to write to
+    """
+    # Calculate total unique explored cells
+    explored_set: Set[Tuple[int, int]] = set()
+    for agent in agents:
+        explored_set.update(agent.local_map.keys())
+    
+    # Calculate total unique frontiers
+    all_frontiers: Set[Tuple[int, int]] = set()
+    for agent in agents:
+        all_frontiers.update(agent.frontiers)
+    
+    # Exploration percentage
+    explored_pct = (len(explored_set) / total_open_cells * 100) if total_open_cells > 0 else 0
+    
+    output_file.write(f"\nMETRICS:\n")
+    output_file.write(f"  Tick: {tick}\n")
+    output_file.write(f"  Goal Reached: {'✓ YES' if goal_reached else 'No'}\n")
+    output_file.write(f"  Total Cells Explored: {len(explored_set)} / {total_open_cells} ({explored_pct:.1f}%)\n")
+    output_file.write(f"  Unique Frontiers Discovered: {len(all_frontiers)}\n")
+    output_file.write("\n")
+    
+    output_file.write(f"AGENT STATUS:\n")
+    for agent in agents:
+        status_parts = []
+        
+        if agent.target_frontier:
+            dist = abs(agent.current_position[0] - agent.target_frontier[0]) + \
+                   abs(agent.current_position[1] - agent.target_frontier[1])
+            status_parts.append(f"Moving to {agent.target_frontier} (dist={dist})")
+        else:
+            status_parts.append("Idle (selecting frontier)")
+        
+        status_parts.append(f"Pos={agent.current_position}")
+        status_parts.append(f"Known={len(agent.local_map)} cells")
+        
+        status = " | ".join(status_parts)
+        output_file.write(f"  {agent.name}: {status}\n")
+    
+    output_file.write("\n")
+    output_file.flush()
+
+
 # ============================================================================
 # TASK 3: Simulation Loop with Message Delivery
 # ============================================================================
@@ -341,106 +462,112 @@ def deliver_messages(agents: List[Node], messages: List[Tuple[int, dict]]):
 def main():
     """Main simulation entry point."""
     
-    print("\n" + "="*80)
-    print("FIXED-SIZE FRONTIER SWARM - BACKEND SIMULATION TEST")
-    print("="*80)
+    # Create output file for logging
+    output_file = open("simulation_output.txt", "w")
     
-    # TASK 1: Setup
-    print("\n[1/4] Creating 20x20 maze...")
-    maze = create_test_maze()
-    start = (0, 0)
-    goal = (19, 19)
-    total_open_cells = count_open_cells(maze)
+    def log(message):
+        """Write to file only."""
+        output_file.write(message + "\n")
+        output_file.flush()
     
-    print(f"  Maze size: 20x20 = 400 cells")
-    print(f"  Open (explorable) cells: {total_open_cells}")
-    print(f"  Start: {start}, Goal: {goal}")
     
-    print("\n[2/4] Spawning dynamic swarm...")
-    
-    # Suppress spawner output
-    import contextlib
-    import io
     with contextlib.redirect_stdout(io.StringIO()):
+        log("\n" + "="*80)
+        log("FIXED-SIZE FRONTIER SWARM - BACKEND SIMULATION TEST")
+        log("="*80)
+        
+        # TASK 1: Setup
+        log("\n[1/4] Creating 20x20 maze...")
+        maze = create_test_maze()
+        start = (0, 0)
+        goal = (19, 19)
+        total_open_cells = count_open_cells(maze)
+        
+        log(f"  Maze size: 20x20 = 400 cells")
+        log(f"  Open (explorable) cells: {total_open_cells}")
+        log(f"  Start: {start}, Goal: {goal}")
+        
+        log("\n[2/4] Spawning dynamic swarm...")
+        
         agents = spawn_agents(maze, start)
-    
-    print(f"  Spawned {len(agents)} agents")
-    
-    if not agents:
-        print("ERROR: No agents spawned! Exiting.")
-        return
-    
-    # TASK 2: Initialize visualization
-    print("\n[3/4] Starting simulation loop (200 ticks max)...")
-    print("\nInitial state:")
-    
-    render_ascii_map(maze, agents, 0, start, goal)
-    print_metrics(agents, maze, 0, False, total_open_cells)
-    
-    time.sleep(1)  # Pause so user can see initial state
-    
-    # TASK 3: Main simulation loop
-    goal_reached = False
-    max_ticks = 200
-    
-    for tick in range(1, max_ticks + 1):
-        # Simulate one tick
-        messages = simulate_tick(agents, maze, verbose=False)
         
-        # Deliver messages to agents
-        deliver_messages(agents, messages)
+        log(f"  Spawned {len(agents)} agents")
         
-        # Check if any agent reached goal
-        for agent in agents:
-            if agent.current_position == goal:
-                goal_reached = True
-                print(f"\n*** GOAL REACHED by {agent.name} at tick {tick}! ***\n")
+        if not agents:
+            log("ERROR: No agents spawned! Exiting.")
+            output_file.close()
+            return
+        
+        # TASK 2: Initialize visualization
+        log("\n[3/4] Starting simulation loop (200 ticks max)...")
+        log("\nInitial state:")
+        
+        render_ascii_map_to_file(maze, agents, 0, start, goal, output_file)
+        print_metrics_to_file(agents, maze, 0, False, total_open_cells, output_file)
+        
+        # TASK 3: Main simulation loop
+        goal_reached = False
+        max_ticks = 1000
+        
+        for tick in range(1, max_ticks + 1):
+            # Simulate one tick
+            messages = simulate_tick(agents, maze, verbose=False)
+            
+            # Deliver messages to agents
+            deliver_messages(agents, messages)
+            
+            # Check if any agent reached goal
+            for agent in agents:
+                if agent.current_position == goal:
+                    goal_reached = True
+                    log(f"\n*** GOAL REACHED by {agent.name} at tick {tick}! ***\n")
+                    break
+            
+            # Log visualization every tick
+            render_ascii_map_to_file(maze, agents, tick, start, goal, output_file)
+            print_metrics_to_file(agents, maze, tick, goal_reached, total_open_cells, output_file)
+            
+            if goal_reached:
                 break
         
-        # Render visualization every tick
-        render_ascii_map(maze, agents, tick, start, goal)
-        print_metrics(agents, maze, tick, goal_reached, total_open_cells)
+        # Final summary
+        log("\n" + "="*80)
+        log("SIMULATION COMPLETE")
+        log("="*80)
         
-        # Sleep for readability
-        time.sleep(0.15)
+        explored_set: Set[Tuple[int, int]] = set()
+        for agent in agents:
+            explored_set.update(agent.local_map.keys())
         
-        if goal_reached:
-            break
+        explored_pct = (len(explored_set) / total_open_cells * 100) if total_open_cells > 0 else 0
+        
+        log(f"\nFinal Statistics:")
+        log(f"  Ticks executed: {tick}")
+        log(f"  Goal reached: {'YES ✓' if goal_reached else 'NO'}")
+        log(f"  Total cells explored: {len(explored_set)} / {total_open_cells} ({explored_pct:.1f}%)")
+        log(f"  Agents in swarm: {len(agents)}")
+        log("")
+        
+        log("Per-Agent Summary:")
+        for agent in agents:
+            log(f"  {agent.name}:")
+            log(f"    Final position: {agent.current_position}")
+            log(f"    Cells discovered: {len(agent.local_map)}")
+            log(f"    Frontiers identified: {len(agent.frontiers)}")
+            if agent.target_frontier:
+                dist = abs(agent.current_position[0] - agent.target_frontier[0]) + \
+                       abs(agent.current_position[1] - agent.target_frontier[1])
+                log(f"    Pursuing frontier: {agent.target_frontier} (distance: {dist})")
+            else:
+                log(f"    Status: Idle (no target frontier)")
+        
+        log("\n" + "="*80)
+        log("Test completed.")
+        log("="*80 + "\n")
+        
+        output_file.close()
     
-    # Final summary
-    print("\n" + "="*80)
-    print("SIMULATION COMPLETE")
-    print("="*80)
-    
-    explored_set: Set[Tuple[int, int]] = set()
-    for agent in agents:
-        explored_set.update(agent.local_map.keys())
-    
-    explored_pct = (len(explored_set) / total_open_cells * 100) if total_open_cells > 0 else 0
-    
-    print(f"\nFinal Statistics:")
-    print(f"  Ticks executed: {tick}")
-    print(f"  Goal reached: {'YES ✓' if goal_reached else 'NO'}")
-    print(f"  Total cells explored: {len(explored_set)} / {total_open_cells} ({explored_pct:.1f}%)")
-    print(f"  Agents in swarm: {len(agents)}")
-    print()
-    
-    print("Per-Agent Summary:")
-    for agent in agents:
-        print(f"  {agent.name}:")
-        print(f"    Final position: {agent.current_position}")
-        print(f"    Cells discovered: {len(agent.local_map)}")
-        print(f"    Frontiers identified: {len(agent.frontiers)}")
-        if agent.target_frontier:
-            dist = abs(agent.current_position[0] - agent.target_frontier[0]) + \
-                   abs(agent.current_position[1] - agent.target_frontier[1])
-            print(f"    Pursuing frontier: {agent.target_frontier} (distance: {dist})")
-        else:
-            print(f"    Status: Idle (no target frontier)")
-    
-    print("\n" + "="*80)
-    print("Test completed. Press Ctrl+C to exit.")
-    print("="*80 + "\n")
+    print("✓ Simulation complete! Output saved to simulation_output.txt")
 
 
 if __name__ == "__main__":
