@@ -13,6 +13,8 @@ interface FullscreenMazeProps {
   startPt: [number, number];
   endPt: [number, number];
   agents: Agent[];
+  currentTick: number;
+  exploredPct: number;
   onClose: () => void;
 }
 
@@ -26,6 +28,8 @@ export default function FullscreenMaze({
   startPt,
   endPt,
   agents,
+  currentTick,
+  exploredPct,
   onClose
 }: FullscreenMazeProps) {
   return (
@@ -121,8 +125,24 @@ export default function FullscreenMaze({
         }}
       >
         {maze && (
-          <div style={{ maxWidth: '90vw', maxHeight: '85vh', overflow: 'auto' }}>
-            <MazeGrid maze={maze} start={startPt} end={endPt} agents={agents} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ 
+              color: '#a0a0a0', 
+              fontSize: '0.95rem',
+              fontFamily: 'monospace',
+              display: 'flex',
+              gap: '2rem',
+              alignItems: 'center',
+              padding: '0.5rem 1rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '6px'
+            }}>
+              <span>Tick: <strong style={{ color: '#fff' }}>{currentTick}</strong></span>
+              <span>Explored: <strong style={{ color: '#fff' }}>{exploredPct}%</strong></span>
+            </div>
+            <div style={{ maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto' }}>
+              <MazeGrid maze={maze} start={startPt} end={endPt} agents={agents} />
+            </div>
           </div>
         )}
       </div>

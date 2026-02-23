@@ -107,6 +107,8 @@ export default function AgentActivity({
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [isFullscreenMaze, setIsFullscreenMaze] = useState(false);
+  const [currentTick, setCurrentTick] = useState(0);
+  const [exploredPct, setExploredPct] = useState(0);
   const processedCount = useRef(0);
 
   const assignAgentColor = useCallback((agentName: string): string => {
@@ -202,6 +204,13 @@ export default function AgentActivity({
       const exploredCells = data.explored_cells ?? 0;
       const totalCells = data.total_cells ?? 0;
       const explored = data.explored_pct ?? (totalCells > 0 ? Math.round((exploredCells / totalCells) * 100) : 0);
+      
+      // Update exploration percentage
+      setExploredPct(explored);
+      if (typeof ticks === 'number') {
+        setCurrentTick(ticks);
+      }
+      
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
@@ -214,6 +223,11 @@ export default function AgentActivity({
     }
 
     else if (data.type === 'tick_update') {
+      // Update current tick
+      if (data.tick !== undefined) {
+        setCurrentTick(data.tick);
+      }
+      
       // Update agent positions from the tick update
       if (Array.isArray(data.agents)) {
         const tickAgents = data.agents;
@@ -385,6 +399,8 @@ export default function AgentActivity({
           startPt={startPt}
           endPt={endPt}
           agents={agents}
+          currentTick={currentTick}
+          exploredPct={exploredPct}
           onClose={() => setIsFullscreenMaze(false)}
         />
       )}
