@@ -14,11 +14,16 @@ interface MazeGridProps {
   start: [number, number];
   end: [number, number];
   agents?: Agent[];
+  discoveredCells?: Set<string>;
 }
 
-const MazeGrid: React.FC<MazeGridProps> = ({ maze, start, end, agents = [] }) => {
+const MazeGrid: React.FC<MazeGridProps> = ({ maze, start, end, agents = [], discoveredCells = new Set() }) => {
   const getAgentAtPosition = (row: number, col: number): Agent | undefined => {
     return agents.find(agent => agent.position[0] === row && agent.position[1] === col);
+  };
+
+  const isDiscovered = (row: number, col: number): boolean => {
+    return discoveredCells.has(`${row},${col}`);
   };
 
   return (
@@ -71,6 +76,9 @@ const MazeGrid: React.FC<MazeGridProps> = ({ maze, start, end, agents = [] }) =>
                   bg = '#e53935';
                   content = 'B';
                   textColor = '#fff';
+                } else if (cell === 0 && isDiscovered(rowIndex, colIndex)) {
+                  // Discovered open cell - light gray
+                  bg = '#d0d0d0';
                 }
 
                 return (

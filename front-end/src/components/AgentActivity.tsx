@@ -45,6 +45,7 @@ interface BackendMessage {
   status?: string;
   goal_reached?: boolean;
   explored_pct?: number;
+  discovered_cell_positions?: number[][];
   tick?: number;
   explored_cells?: number;
   total_cells?: number;
@@ -112,6 +113,7 @@ export default function AgentActivity({
   const [isFullscreenMaze, setIsFullscreenMaze] = useState(false);
   const [currentTick, setCurrentTick] = useState(0);
   const [exploredPct, setExploredPct] = useState(0);
+  const [discoveredCells, setDiscoveredCells] = useState<Set<string>>(new Set());
   const processedCount = useRef(0);
 
   const assignAgentColor = useCallback((agentName: string): string => {
@@ -268,6 +270,12 @@ export default function AgentActivity({
         setExploredPct(data.explored_pct);
       }
       
+      // Update discovered cells
+      if (Array.isArray(data.discovered_cell_positions)) {
+        const cellSet = new Set(data.discovered_cell_positions.map(cell => `${cell[0]},${cell[1]}`));
+        setDiscoveredCells(cellSet);
+      }
+      
       // Update agent positions from the tick update
       if (Array.isArray(data.agents)) {
         const tickAgents = data.agents;
@@ -351,7 +359,7 @@ export default function AgentActivity({
               <div className="activity-maze-preview">
                 {maze ? (
                   <>
-                    <MazeGrid maze={maze} start={startPt} end={endPt} agents={agents} />
+                    <MazeGrid maze={maze} start={startPt} end={endPt} agents={agents} discoveredCells={discoveredCells} />
                     <button
                       onClick={() => setIsFullscreenMaze(true)}
                       style={{
@@ -441,6 +449,7 @@ export default function AgentActivity({
           agents={agents}
           currentTick={currentTick}
           exploredPct={exploredPct}
+          discoveredCells={discoveredCells}
           onClose={() => setIsFullscreenMaze(false)}
         />
       )}
