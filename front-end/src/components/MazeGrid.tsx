@@ -6,6 +6,7 @@ interface Agent {
   position: [number, number];
   color: string;
   status: string;
+  isHittingWall?: boolean;
 }
 
 interface MazeGridProps {
@@ -22,6 +23,25 @@ const MazeGrid: React.FC<MazeGridProps> = ({ maze, start, end, agents = [] }) =>
 
   return (
     <div className="maze-grid-container">
+      <style>{`
+        @keyframes wallFlash {
+          0% {
+            background-color: #e74337;
+            box-shadow: 0 0 12px rgba(231, 67, 55, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3);
+          }
+          50% {
+            background-color: #ff6b6b;
+            box-shadow: 0 0 20px rgba(231, 67, 55, 1), inset 0 0 12px rgba(255, 255, 255, 0.5);
+          }
+          100% {
+            background-color: #e74337;
+            box-shadow: 0 0 12px rgba(231, 67, 55, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3);
+          }
+        }
+        .agent-wall-hit {
+          animation: wallFlash 0.6s ease-in-out;
+        }
+      `}</style>
       <table className="maze-table">
         <tbody>
           {maze.map((row, rowIndex) => (
@@ -31,10 +51,16 @@ const MazeGrid: React.FC<MazeGridProps> = ({ maze, start, end, agents = [] }) =>
                 let bg = cell === 1 ? '#222' : '#eee';
                 let content = '';
                 let textColor = '#000';
+                let animationClassName = '';
 
                 if (agent) {
                   // Agent takes priority
-                  bg = agent.color;
+                  if (agent.isHittingWall) {
+                    bg = '#e74337';
+                    animationClassName = 'agent-wall-hit';
+                  } else {
+                    bg = agent.color;
+                  }
                   content = agent.name.charAt(agent.name.length - 1);
                   textColor = '#fff';
                 } else if (start[0] === rowIndex && start[1] === colIndex) {
@@ -49,7 +75,7 @@ const MazeGrid: React.FC<MazeGridProps> = ({ maze, start, end, agents = [] }) =>
 
                 return (
                   <td
-                    className="maze-cell"
+                    className={`maze-cell ${animationClassName}`}
                     style={{
                       background: bg,
                       color: textColor,

@@ -6,6 +6,7 @@ interface Agent {
   position: [number, number];
   status: 'exploring' | 'inactive' | 'completed';
   color: string;
+  isHittingWall?: boolean;
 }
 
 interface FullscreenMazeProps {

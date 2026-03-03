@@ -28,7 +28,7 @@ class Node:
     - claimed_frontiers: Set of frontiers claimed by any agent
     """
     
-    def __init__(self, port: int, name: str, agent_id: int):
+    def __init__(self, port: int, name: str, agent_id: int, maze_width: int = 0, maze_height: int = 0):
         """
         Initialize a swarm agent.
         
@@ -36,10 +36,14 @@ class Node:
             port: UDP port for this agent
             name: Human-readable name
             agent_id: Unique numeric identifier
+            maze_width: Width of the maze (for boundary detection)
+            maze_height: Height of the maze (for boundary detection)
         """
         self.port = port
         self.name = name
         self.agent_id = agent_id
+        self.maze_width = maze_width
+        self.maze_height = maze_height
         
         # Core data structures
         self.local_map: Dict[Tuple[int, int], Set[Tuple[int, int]]] = {}
@@ -64,6 +68,9 @@ class Node:
         
         # Stuck detection
         self.stuck_counter: int = 0
+        
+        # Wall hit tracking (to avoid spamming multiple hits at same location)
+        self.recent_wall_hits: Set[Tuple[int, int]] = set()
     
     def send_activity_log(self, log_type: str, extra_data: Optional[Dict] = None):
         """
@@ -86,6 +93,26 @@ class Node:
             self.send_json("127.0.0.1", 9000, payload)
         except Exception as e:
             pass
+
+    def report_wall_hit(self, wall_position: Tuple[int, int]):
+        """
+        Report when an agent encounters a wall/blocked tile.
+        Differentiates between boundary walls and internal blocks.
+        
+        Args:
+            wall_position: The (x,y) position of the wall/blocked tile
+        """
+        # Determine if this is a boundary wall or internal block
+        x, y = wall_position
+        is_boundary = (x == 0 or x == self.maze_width - 1 or 
+                       y == 0 or y == self.maze_height - 1)
+        obstacle_type = "wall" if is_boundary else "block"
+        
+        self.send_activity_log("agent_wall_hit", {
+            "position": list(self.current_position) if self.current_position else [0, 0],
+            "wall_position": list(wall_position),
+            "obstacle_type": obstacle_type
+        })
 
     def set_initial_position(self, position: Tuple[int, int]):
         """Set the agent's starting position and initialize local_map."""
@@ -269,6 +296,7 @@ class Node:
     def _scan_neighbors(self, local_grid_view: List[List[int]]) -> List[Tuple[int, int]]:
         """
         Scan 4-neighbors in the local grid view and identify frontiers.
+        Also detects and reports wall hits.
         """
         if not self.current_position:
             return []
@@ -291,8 +319,15 @@ class Node:
             
             cell = local_grid_view[nx][ny]
             
-            # Skip walls
+            # Check if this is a wall
             if self._is_wall(cell):
+                # Report wall hit if we haven't recently reported this wall
+                if (nx, ny) not in self.recent_wall_hits:
+                    self.report_wall_hit((nx, ny))
+                    self.recent_wall_hits.add((nx, ny))
+                    # Clear old hits after a few ticks to allow re-reporting
+                    if len(self.recent_wall_hits) > 10:
+                        self.recent_wall_hits.clear()
                 continue
             
             # Check if this open space is a new frontier

@@ -12,6 +12,7 @@ interface Agent {
   position: [number, number];
   status: 'exploring' | 'inactive' | 'completed';
   color: string;
+  isHittingWall?: boolean;
 }
 
 interface ActivityLog {
@@ -39,6 +40,8 @@ interface BackendMessage {
   frontier?: [number, number];
   from_position?: [number, number];
   to_position?: [number, number];
+  wall_position?: [number, number];
+  obstacle_type?: string;
   status?: string;
   goal_reached?: boolean;
   explored_pct?: number;
@@ -176,6 +179,38 @@ export default function AgentActivity({
         agentName: data.agent_name,
         message: `Exploring frontier (${data.frontier[0]},${data.frontier[1]})`,
         type: 'move'
+      };
+      setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+
+    else if (data.type === 'agent_wall_hit') {
+      if (!data.agent_name) return;
+      const wallPos = data.wall_position || [0, 0];
+      const obstacleType = data.obstacle_type || 'wall';
+      
+      // Set agent to flashing red state
+      setAgents(prev => prev.map(agent =>
+        agent.name === data.agent_name
+          ? { ...agent, isHittingWall: true }
+          : agent
+      ));
+      
+      // Reset flash after animation completes (600ms)
+      setTimeout(() => {
+        setAgents(prev => prev.map(agent =>
+          agent.name === data.agent_name
+            ? { ...agent, isHittingWall: false }
+            : agent
+        ));
+      }, 600);
+      
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        timestamp,
+        agentId: data.agent_name.toLowerCase().replace(' ', '-'),
+        agentName: data.agent_name,
+        message: `Hit ${obstacleType} at (${wallPos[0]},${wallPos[1]})`,
+        type: 'error'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
     }
