@@ -218,7 +218,13 @@ export default function AgentActivity({
     else if (data.type === 'agent_wall_hit') {
       if (!data.agent_name) return;
       const wallPos = data.wall_position || [0, 0];
-      const obstacleType = data.obstacle_type || 'wall';
+      // Rename obstacle types: 'block' -> 'wall', 'wall' -> 'boundary'
+      let obstacleType = data.obstacle_type || 'wall';
+      if (obstacleType === 'block') {
+        obstacleType = 'wall';
+      } else if (obstacleType === 'wall') {
+        obstacleType = 'boundary';
+      }
       
       // Set agent to flashing red state
       setAgents(prev => prev.map(agent =>
