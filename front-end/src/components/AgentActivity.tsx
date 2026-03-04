@@ -13,6 +13,7 @@ interface Agent {
   status: 'exploring' | 'inactive' | 'completed';
   color: string;
   isHittingWall?: boolean;
+  isDiscoveringCell?: boolean;
 }
 
 interface ActivityLog {
@@ -151,11 +152,26 @@ export default function AgentActivity({
 
     else if (data.type === 'agent_move') {
       if (!data.agent_name || !data.from_position || !data.to_position) return;
-      setAgents(prev => prev.map(agent =>
-        agent.name === data.agent_name
-          ? { ...agent, status: 'exploring', position: data.to_position! }
-          : agent
-      ));
+      setAgents(prev => prev.map(agent => {
+        if (agent.name === data.agent_name) {
+          // If agent moves to a new cell, trigger discovery flash
+          const cellKey = `${data.to_position[0]},${data.to_position[1]}`;
+          const alreadyDiscovered = discoveredCells.has(cellKey);
+          if (!alreadyDiscovered) {
+            return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: true, isHittingWall: false };
+          }
+          return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: false };
+        }
+        return agent;
+      }));
+      // Reset discovery flash after animation completes (500ms)
+      setTimeout(() => {
+        setAgents(prev => prev.map(agent =>
+          agent.name === data.agent_name
+            ? { ...agent, isDiscoveringCell: false }
+            : agent
+        ));
+      }, 500);
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
@@ -169,11 +185,25 @@ export default function AgentActivity({
 
     else if (data.type === 'agent_frontier') {
       if (!data.agent_name || !data.frontier) return;
-      setAgents(prev => prev.map(agent =>
-        agent.name === data.agent_name && agent.status !== 'completed'
-          ? { ...agent, status: 'exploring', position: data.frontier! }
-          : agent
-      ));
+      setAgents(prev => prev.map(agent => {
+        if (agent.name === data.agent_name && agent.status !== 'completed') {
+          const cellKey = `${data.frontier[0]},${data.frontier[1]}`;
+          const alreadyDiscovered = discoveredCells.has(cellKey);
+          if (!alreadyDiscovered) {
+            return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: true, isHittingWall: false };
+          }
+          return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: false };
+        }
+        return agent;
+      }));
+      // Reset discovery flash after animation completes (500ms)
+      setTimeout(() => {
+        setAgents(prev => prev.map(agent =>
+          agent.name === data.agent_name
+            ? { ...agent, isDiscoveringCell: false }
+            : agent
+        ));
+      }, 500);
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,

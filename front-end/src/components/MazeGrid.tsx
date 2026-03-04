@@ -46,6 +46,23 @@ const MazeGrid: React.FC<MazeGridProps> = ({ maze, start, end, agents = [], disc
         .agent-wall-hit {
           animation: wallFlash 0.6s ease-in-out;
         }
+          @keyframes discoverFlash {
+            0% {
+              background-color: #34eadd;
+              box-shadow: 0 0 12px rgba(44, 239, 145, 0.8), inset 0 0 8px rgba(255,255,255,0.3);
+            }
+            50% {
+              background-color: #81f2fa;
+              box-shadow: 0 0 20px rgba(44, 239, 80, 0.8), inset 0 0 12px rgba(255,255,255,0.5);
+            }
+            100% {
+              background-color: #4ff7f7;
+              box-shadow: 0 0 12px rgba(44, 239, 145, 0.8), inset 0 0 8px rgba(255,255,255,0.3);
+            }
+          }
+          .agent-discover-flash {
+            animation: discoverFlash 0.5s ease-in-out;
+          }
       `}</style>
       <table className="maze-table">
         <tbody>
@@ -60,12 +77,15 @@ const MazeGrid: React.FC<MazeGridProps> = ({ maze, start, end, agents = [], disc
 
                 if (agent) {
                   // Agent takes priority
-                  if (agent.isHittingWall) {
-                    bg = '#e74337';
-                    animationClassName = 'agent-wall-hit';
-                  } else {
-                    bg = agent.color;
-                  }
+                    if (agent.isDiscoveringCell) {
+                      bg = '#4fc3f7'; // blue flash for discovery
+                      animationClassName = 'agent-discover-flash';
+                    } else if (agent.isHittingWall) {
+                      bg = '#e74337';
+                      animationClassName = 'agent-wall-hit';
+                    } else {
+                      bg = agent.color;
+                    }
                   content = agent.name.charAt(agent.name.length - 1);
                   textColor = '#fff';
                 } else if (start[0] === rowIndex && start[1] === colIndex) {
