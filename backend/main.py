@@ -1,3 +1,23 @@
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+# -------------------------
+# HTTP Health Check Endpoint
+# -------------------------
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'OK')
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+
+def run_health_server():
+    server = HTTPServer(('0.0.0.0', 10000), HealthHandler)
+    server.serve_forever()
+
 import asyncio
 import json
 import websockets
@@ -192,4 +212,6 @@ async def main():
 
 
 if __name__ == "__main__":
+    # Start health check server in a separate thread
+    threading.Thread(target=run_health_server, daemon=True).start()
     asyncio.run(main())
