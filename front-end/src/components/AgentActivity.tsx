@@ -153,14 +153,14 @@ export default function AgentActivity({
     else if (data.type === 'agent_move') {
       if (!data.agent_name || !data.from_position || !data.to_position) return;
       setAgents(prev => prev.map(agent => {
-        if (agent.name === data.agent_name) {
+        if (agent.name === data.agent_name && data.to_position) {
           // If agent moves to a new cell, trigger discovery flash
-          const cellKey = `${data.to_position[0]},${data.to_position[1]}`;
+          const cellKey = `${data.to_position[0] ?? 0},${data.to_position[1] ?? 0}`;
           const alreadyDiscovered = discoveredCells.has(cellKey);
           if (!alreadyDiscovered) {
-            return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: true, isHittingWall: false };
+            return { ...agent, status: 'exploring', position: data.to_position, isDiscoveringCell: true, isHittingWall: false };
           }
-          return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: false };
+          return { ...agent, status: 'exploring', position: data.to_position, isDiscoveringCell: false };
         }
         return agent;
       }));
@@ -177,7 +177,7 @@ export default function AgentActivity({
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Moving one step from (${data.from_position[0]},${data.from_position[1]}) to (${data.to_position[0]},${data.to_position[1]})`,
+        message: `Moving one step from (${data.from_position?.[0] ?? 0},${data.from_position?.[1] ?? 0}) to (${data.to_position?.[0] ?? 0},${data.to_position?.[1] ?? 0})`,
         type: 'move'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -186,13 +186,13 @@ export default function AgentActivity({
     else if (data.type === 'agent_frontier') {
       if (!data.agent_name || !data.frontier) return;
       setAgents(prev => prev.map(agent => {
-        if (agent.name === data.agent_name && agent.status !== 'completed') {
-          const cellKey = `${data.frontier[0]},${data.frontier[1]}`;
+        if (agent.name === data.agent_name && agent.status !== 'completed' && data.frontier) {
+          const cellKey = `${data.frontier[0] ?? 0},${data.frontier[1] ?? 0}`;
           const alreadyDiscovered = discoveredCells.has(cellKey);
           if (!alreadyDiscovered) {
-            return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: true, isHittingWall: false };
+            return { ...agent, status: 'exploring', position: data.frontier, isDiscoveringCell: true, isHittingWall: false };
           }
-          return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: false };
+          return { ...agent, status: 'exploring', position: data.frontier, isDiscoveringCell: false };
         }
         return agent;
       }));
