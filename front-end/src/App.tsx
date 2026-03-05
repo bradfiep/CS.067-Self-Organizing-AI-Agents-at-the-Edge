@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import oregonLogo from './assets/Oregon_State_text_logo.png';
 import './App.css';
 import Header from './components/Header';
 import Button from './components/Button';
 import MazeBuilder from './components/MazeBuilder';
 import AgentActivity from './components/AgentActivity';
-import mazeImg from './assets/maze.png';
 
 function App() {
   // State management for the application
@@ -80,7 +78,7 @@ function App() {
   if (showActivity) {
     return (
       <>
-        <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
+        <Header title="Multi-Agent Maze Solver" logoSrc="/Oregon_State_text_logo.png" actions={header_actions} />
         <AgentActivity
           onBack={() => {
             setShowActivity(false);
@@ -113,7 +111,7 @@ function App() {
     // Render the Maze Builder interface
     return (
       <>
-        <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
+        <Header title="Multi-Agent Maze Solver" logoSrc="/Oregon_State_text_logo.png" actions={header_actions} />
         <MazeBuilder
           onBack={() => {
             resetMazeBuilderState();
@@ -150,7 +148,7 @@ function App() {
   // Render the Home Page
   return (
     <>
-      <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
+      <Header title="Multi-Agent Maze Solver" logoSrc="/Oregon_State_text_logo.png" actions={header_actions} />
       <div className="maze-section">
         <div className="maze-text">
           <h2>
@@ -165,7 +163,7 @@ function App() {
           </div>
         </div>
         <div className="maze-image">
-          <img src={mazeImg} alt="Maze Image" />
+          <img src="/maze.png" alt="Maze Image" />
         </div>
       </div>
     </>
