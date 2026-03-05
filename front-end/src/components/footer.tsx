@@ -1,4 +1,6 @@
 import React from "react";
+import OSULogo from '../assets/OSU_logo.png';
+import GithubLogo from '../assets/github_logo.png';
 
 const footerStyle: React.CSSProperties = {
     position: "fixed",
@@ -41,13 +43,13 @@ const Footer: React.FC = () => {
         <footer style={footerStyle} role="contentinfo">
             <div style={topRowStyle}>
                 <a href="https://oregonstate.edu/" style={linkStyle} aria-label="Home">
-                    <img src="../src/assets/OSU_logo.png" alt="OSU Logo" style={{ height: 50, verticalAlign: "middle" }} />
+                    <img src={OSULogo} alt="OSU Logo" style={{ height: 50, verticalAlign: "middle" }} />
                     <span>Oregon State University</span>
                 </a>
 
                 <a href="https://github.com/bradfiep/CS.067-Self-Organizing-AI-Agents-at-the-Edge" style={linkStyle} aria-label="GitHub">
                     <span>GitHub</span>
-                    <img src="../src/assets/github_logo.png" alt="GitHub Logo" style={{ height: 40, verticalAlign: "middle" }} />
+                    <img src={GithubLogo} alt="GitHub Logo" style={{ height: 40, verticalAlign: "middle" }} />
                 </a>
             </div>
 
