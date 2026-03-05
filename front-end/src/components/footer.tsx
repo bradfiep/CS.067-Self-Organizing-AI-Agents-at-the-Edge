@@ -1,6 +1,4 @@
 import React from "react";
-import OSULogo from '../assets/OSU_logo.png';
-import GithubLogo from '../assets/github_logo.png';
 
 const footerStyle: React.CSSProperties = {
     position: "fixed",
