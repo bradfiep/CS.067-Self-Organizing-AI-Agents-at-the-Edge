@@ -214,7 +214,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    # Only run health check server locally (not on Render)
-    if os.environ.get('PORT') is None:
-        threading.Thread(target=run_health_server, daemon=True).start()
     asyncio.run(main())
