@@ -1,5 +1,6 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+import os
 # -------------------------
 # HTTP Health Check Endpoint
 # -------------------------
@@ -200,10 +201,11 @@ async def main():
     global event_loop
     event_loop = asyncio.get_running_loop()  
 
-    ws_server = await websockets.serve(handler, "0.0.0.0", 8080)
+    port = int(os.environ.get('PORT', 8080))
+    ws_server = await websockets.serve(handler, "0.0.0.0", port)
     udp_listener = asyncio.create_task(node.web_listen())
 
-    print("🚀 WebSocket server running on ws://localhost:8080")
+    print(f"🚀 WebSocket server running on ws://0.0.0.0:{port}")
 
     await asyncio.gather(
         ws_server.wait_closed(),
@@ -212,6 +214,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    # Start health check server in a separate thread
-    threading.Thread(target=run_health_server, daemon=True).start()
+    # Only run health check server locally (not on Render)
+    if os.environ.get('PORT') is None:
+        threading.Thread(target=run_health_server, daemon=True).start()
     asyncio.run(main())
