@@ -155,7 +155,7 @@ export default function AgentActivity({
       setAgents(prev => prev.map(agent => {
         if (agent.name === data.agent_name) {
           // If agent moves to a new cell, trigger discovery flash
-          const cellKey = `${data.to_position[0]},${data.to_position[1]}`;
+          const cellKey = `${data.to_position![0]},${data.to_position![1]}`;
           const alreadyDiscovered = discoveredCells.has(cellKey);
           if (!alreadyDiscovered) {
             return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: true, isHittingWall: false };
@@ -177,7 +177,7 @@ export default function AgentActivity({
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Moving one step from (${data.from_position[0]},${data.from_position[1]}) to (${data.to_position[0]},${data.to_position[1]})`,
+        message: `Moving one step from (${data.from_position![0]},${data.from_position![1]}) to (${data.to_position![0]},${data.to_position![1]})`,
         type: 'move'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -187,7 +187,7 @@ export default function AgentActivity({
       if (!data.agent_name || !data.frontier) return;
       setAgents(prev => prev.map(agent => {
         if (agent.name === data.agent_name && agent.status !== 'completed') {
-          const cellKey = `${data.frontier[0]},${data.frontier[1]}`;
+          const cellKey = `${data.frontier![0]},${data.frontier![1]}`;
           const alreadyDiscovered = discoveredCells.has(cellKey);
           if (!alreadyDiscovered) {
             return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: true, isHittingWall: false };
@@ -218,7 +218,6 @@ export default function AgentActivity({
     else if (data.type === 'agent_wall_hit') {
       if (!data.agent_name) return;
       const wallPos = data.wall_position || [0, 0];
-      // Rename obstacle types: 'block' -> 'wall', 'wall' -> 'boundary'
       let obstacleType = data.obstacle_type || 'wall';
       if (obstacleType === 'block') {
         obstacleType = 'wall';

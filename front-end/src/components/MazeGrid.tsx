@@ -7,6 +7,7 @@ interface Agent {
   color: string;
   status: string;
   isHittingWall?: boolean;
+  isDiscoveringCell?: boolean;
 }
 
 interface MazeGridProps {
