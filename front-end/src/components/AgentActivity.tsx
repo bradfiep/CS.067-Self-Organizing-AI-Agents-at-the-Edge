@@ -73,7 +73,7 @@ function AgentListItem({ agent }: { agent: Agent }) {
         <div className="agent-name">{agent.name}</div>
         <div className="agent-details">
           <span>Status: {agent.status}</span>
-          <span>Pos: ({position[0]},{position[1]})</span>
+          <span>Pos (row,col): ({position[0]},{position[1]})</span>
         </div>
       </div>
     </div>
@@ -115,7 +115,14 @@ export default function AgentActivity({
   const [currentTick, setCurrentTick] = useState(0);
   const [exploredPct, setExploredPct] = useState(0);
   const [discoveredCells, setDiscoveredCells] = useState<Set<string>>(new Set());
+  const [flashingCells, setFlashingCells] = useState<Set<string>>(new Set());
+  const discoveredCellsRef = useRef<Set<string>>(new Set());
   const processedCount = useRef(0);
+
+  // Internal coordinates are [row, col]; display as (x, y) => (col, row).
+  const formatCoordinate = (position: [number, number]): string => {
+    return `(${position[1]},${position[0]})`;
+  };
 
   const assignAgentColor = useCallback((agentName: string): string => {
     const colors = ['#297AEB', '#F28B1E', '#f8d32b', '#9718ad', '#e74337', '#1AB74E'];
@@ -144,7 +151,7 @@ export default function AgentActivity({
         timestamp,
         agentId: newAgent.id,
         agentName: data.agent_name,
-        message: `Agent registered at position (${data.position[0]},${data.position[1]})`,
+        message: `Agent registered at position ${formatCoordinate(data.position)}`,
         type: 'info'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -152,32 +159,46 @@ export default function AgentActivity({
 
     else if (data.type === 'agent_move') {
       if (!data.agent_name || !data.from_position || !data.to_position) return;
+      const cellKey = `${data.to_position[0]},${data.to_position[1]}`;
+      const isNewCell = !discoveredCellsRef.current.has(cellKey);
+      if (isNewCell) {
+        // Mark discovered immediately so repeated visits do not retrigger discovery flash.
+        setDiscoveredCells(prev => {
+          const next = new Set(prev);
+          next.add(cellKey);
+          discoveredCellsRef.current = next;
+          return next;
+        });
+
+        // Trigger a short flash on the newly discovered cell.
+        setFlashingCells(prev => {
+          const next = new Set(prev);
+          next.add(cellKey);
+          return next;
+        });
+        setTimeout(() => {
+          setFlashingCells(prev => {
+            const next = new Set(prev);
+            next.delete(cellKey);
+            return next;
+          });
+        }, 500);
+      }
       setAgents(prev => prev.map(agent => {
         if (agent.name === data.agent_name) {
-          // If agent moves to a new cell, trigger discovery flash
-          const cellKey = `${data.to_position![0]},${data.to_position![1]}`;
-          const alreadyDiscovered = discoveredCells.has(cellKey);
-          if (!alreadyDiscovered) {
-            return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: true, isHittingWall: false };
+          if (isNewCell) {
+            return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: false, isHittingWall: false };
           }
           return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: false };
         }
         return agent;
       }));
-      // Reset discovery flash after animation completes (500ms)
-      setTimeout(() => {
-        setAgents(prev => prev.map(agent =>
-          agent.name === data.agent_name
-            ? { ...agent, isDiscoveringCell: false }
-            : agent
-        ));
-      }, 500);
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Moving one step from (${data.from_position![0]},${data.from_position![1]}) to (${data.to_position![0]},${data.to_position![1]})`,
+        message: `Moving one step from ${formatCoordinate(data.from_position!)} to ${formatCoordinate(data.to_position!)}`,
         type: 'move'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -185,31 +206,44 @@ export default function AgentActivity({
 
     else if (data.type === 'agent_frontier') {
       if (!data.agent_name || !data.frontier) return;
+      const cellKey = `${data.frontier[0]},${data.frontier[1]}`;
+      const isNewCell = !discoveredCellsRef.current.has(cellKey);
+      if (isNewCell) {
+        setDiscoveredCells(prev => {
+          const next = new Set(prev);
+          next.add(cellKey);
+          discoveredCellsRef.current = next;
+          return next;
+        });
+
+        setFlashingCells(prev => {
+          const next = new Set(prev);
+          next.add(cellKey);
+          return next;
+        });
+        setTimeout(() => {
+          setFlashingCells(prev => {
+            const next = new Set(prev);
+            next.delete(cellKey);
+            return next;
+          });
+        }, 500);
+      }
       setAgents(prev => prev.map(agent => {
         if (agent.name === data.agent_name && agent.status !== 'completed') {
-          const cellKey = `${data.frontier![0]},${data.frontier![1]}`;
-          const alreadyDiscovered = discoveredCells.has(cellKey);
-          if (!alreadyDiscovered) {
-            return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: true, isHittingWall: false };
+          if (isNewCell) {
+            return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: false, isHittingWall: false };
           }
           return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: false };
         }
         return agent;
       }));
-      // Reset discovery flash after animation completes (500ms)
-      setTimeout(() => {
-        setAgents(prev => prev.map(agent =>
-          agent.name === data.agent_name
-            ? { ...agent, isDiscoveringCell: false }
-            : agent
-        ));
-      }, 500);
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Exploring frontier (${data.frontier[0]},${data.frontier[1]})`,
+        message: `Exploring frontier ${formatCoordinate(data.frontier)}`,
         type: 'move'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -217,7 +251,7 @@ export default function AgentActivity({
 
     else if (data.type === 'agent_wall_hit') {
       if (!data.agent_name) return;
-      const wallPos = data.wall_position || [0, 0];
+      const wallPos: [number, number] = data.wall_position || [0, 0];
       let obstacleType = data.obstacle_type || 'wall';
       if (obstacleType === 'block') {
         obstacleType = 'wall';
@@ -246,7 +280,7 @@ export default function AgentActivity({
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Hit ${obstacleType} at (${wallPos[0]},${wallPos[1]})`,
+        message: `Hit ${obstacleType} at ${formatCoordinate(wallPos)}`,
         type: 'error'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -264,7 +298,7 @@ export default function AgentActivity({
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Reached goal (${data.position[0]},${data.position[1]}) ✓`,
+        message: `Reached goal ${formatCoordinate(data.position)} ✓`,
         type: 'success'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -307,8 +341,15 @@ export default function AgentActivity({
       
       // Update discovered cells
       if (Array.isArray(data.discovered_cell_positions)) {
-        const cellSet = new Set(data.discovered_cell_positions.map(cell => `${cell[0]},${cell[1]}`));
-        setDiscoveredCells(cellSet);
+        // Keep this set monotonic to avoid regressions from delayed or partial tick payloads.
+        setDiscoveredCells(prev => {
+          const next = new Set(prev);
+          data.discovered_cell_positions!.forEach(cell => {
+            next.add(`${cell[0]},${cell[1]}`);
+          });
+          discoveredCellsRef.current = next;
+          return next;
+        });
       }
       
       // Update agent positions from the tick update
@@ -394,7 +435,14 @@ export default function AgentActivity({
               <div className="activity-maze-preview">
                 {maze ? (
                   <>
-                    <MazeGrid maze={maze} start={startPt} end={endPt} agents={agents} discoveredCells={discoveredCells} />
+                    <MazeGrid
+                      maze={maze}
+                      start={startPt}
+                      end={endPt}
+                      agents={agents}
+                      discoveredCells={discoveredCells}
+                      flashingCells={flashingCells}
+                    />
                     <button
                       onClick={() => setIsFullscreenMaze(true)}
                       style={{
@@ -485,6 +533,7 @@ export default function AgentActivity({
           currentTick={currentTick}
           exploredPct={exploredPct}
           discoveredCells={discoveredCells}
+          flashingCells={flashingCells}
           onClose={() => setIsFullscreenMaze(false)}
         />
       )}

@@ -102,10 +102,15 @@ class Node:
         Args:
             wall_position: The (x,y) position of the wall/blocked tile
         """
-        # Determine if this is a boundary wall or internal block
-        x, y = wall_position
-        is_boundary = (x == 0 or x == self.maze_width - 1 or 
-                       y == 0 or y == self.maze_height - 1)
+        # Coordinates are stored/used as (row, col) across tick/scan logic.
+        # Compare row against maze_height and col against maze_width.
+        row, col = wall_position
+        is_boundary = (
+            row == 0
+            or row == self.maze_height - 1
+            or col == 0
+            or col == self.maze_width - 1
+        )
         obstacle_type = "wall" if is_boundary else "block"
         
         self.send_activity_log("agent_wall_hit", {
