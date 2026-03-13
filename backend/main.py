@@ -146,6 +146,7 @@ async def run_live_simulation(maze, start, end, websocket):
             "tick": tick,
             "goal_reached": goal_reached,
             "explored_pct": round(explored_pct, 1),
+            "discovered_cell_positions": [list(cell) for cell in explored],
             "agents": agent_data
         }
         
