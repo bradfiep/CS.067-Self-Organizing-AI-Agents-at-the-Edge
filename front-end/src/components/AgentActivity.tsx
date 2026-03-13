@@ -73,7 +73,7 @@ function AgentListItem({ agent }: { agent: Agent }) {
         <div className="agent-name">{agent.name}</div>
         <div className="agent-details">
           <span>Status: {agent.status}</span>
-          <span>Pos (col,row): ({position[1]},{position[0]})</span>
+          <span>{`Pos (col,row): (${position[1]},${position[0]})`}</span>
         </div>
       </div>
     </div>
