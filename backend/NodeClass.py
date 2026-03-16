@@ -64,6 +64,11 @@ class Node:
         
         # Stuck detection
         self.stuck_counter: int = 0
+
+        #the list to save agent's path and number
+        self.agent_path = []
+        #the number of steps taken by each agent
+        self.num_steps = 0
     
     def send_activity_log(self, log_type: str, extra_data: Optional[Dict] = None):
         """
@@ -91,6 +96,8 @@ class Node:
         """Set the agent's starting position and initialize local_map."""
         self.current_position = position
         self.local_map[position] = set()
+        #get the initial position of the agent
+        self.agent_path = [position]
         print(f"{self.name} starting at {position}")
 
     def _manhattan_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
@@ -456,6 +463,11 @@ class Node:
             new_pos = self._move_toward_target()
             if new_pos != self.current_position:
                 self.current_position = new_pos
+
+                #record the path and count steps
+                self.num_steps += 1
+                self.agent_path.append(new_pos)
+
                 # Ensure newly visited position is in local_map
                 if self.current_position not in self.local_map:
                     self.local_map[self.current_position] = set()
@@ -533,3 +545,9 @@ class Node:
         except Exception as e:
             print(f"{self.name} failed to save message: {e}")
 
+    #getters to be used for another class/file calls
+    def get_agent_path(self):
+        return self.agent_path
+
+    def get_agent_steps(self):
+        return self.num_steps
