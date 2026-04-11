@@ -224,7 +224,7 @@ describe('AgentActivity Component', () => {
       await waitFor(() => {
         const timeElement = document.querySelector('.activity-log-time');
         expect(timeElement).toBeInTheDocument();
-        expect(timeElement?.textContent).toMatch(/\d{2}:\d{2}:\d{2}/);
+        expect(timeElement?.textContent).toMatch(/\d{2}:\d{2}\.\d{3}/);
       });
     });
   });

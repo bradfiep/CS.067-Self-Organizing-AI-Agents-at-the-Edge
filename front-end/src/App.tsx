@@ -85,6 +85,7 @@ function App() {
           onBack={() => {
             setShowActivity(false);
             setShowBuilder(true);
+            setMessageQueue([]);
           }}
           messageQueue={messageQueue}
           maze={maze}

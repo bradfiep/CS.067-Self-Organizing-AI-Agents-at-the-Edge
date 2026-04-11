@@ -101,6 +101,16 @@ function ExpandIcon() {
   return <i className="bi bi-arrows-angle-expand" style={{ fontSize: '20px' }}></i>;
 }
 
+// For timestamp, converts a start timestamp into a MM:SS.ms elapsed string
+const getElapsed = (startTime: number | null): string => {
+  if (!startTime) return '00:00.000';
+  const elapsed = Date.now() - startTime;
+  const m = Math.floor(elapsed / 60000);
+  const s = Math.floor((elapsed % 60000) / 1000);
+  const ms = elapsed % 1000;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+};
+
 export default function AgentActivity({
   onBack,
   messageQueue,
@@ -118,6 +128,16 @@ export default function AgentActivity({
   const [flashingCells, setFlashingCells] = useState<Set<string>>(new Set());
   const discoveredCellsRef = useRef<Set<string>>(new Set());
   const processedCount = useRef(0);
+  const [elapsedTime, setElapsedTime] = useState('00:00.000');
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerStartRef = useRef<number | null>(null);
+
+  // Clear the interval on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, []);
 
   // Internal coordinates are [row, col]; display as (x, y) => (col, row).
   const formatCoordinate = (position: [number, number]): string => {
@@ -305,6 +325,13 @@ export default function AgentActivity({
     }
 
     else if (data.type === 'simulation_complete') {
+      // Stop the timer and snap to the exact final elapsed time
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setElapsedTime(getElapsed(timerStartRef.current));
+
       const result = data.goal_reached ? 'Success ✓' : 'Failed ✗';
       const ticks = data.tick ?? 'unknown';
       const exploredCells = data.explored_cells ?? 0;
@@ -375,6 +402,12 @@ export default function AgentActivity({
     }
 
     else if (data.type === 'ack') {
+      // Start the elapsed timer when the backend acknowledges the simulation
+      timerStartRef.current = Date.now();
+      timerIntervalRef.current = setInterval(() => {
+        setElapsedTime(getElapsed(timerStartRef.current));
+      }, 100);
+
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
@@ -391,15 +424,11 @@ export default function AgentActivity({
     const unprocessed = messageQueue.slice(processedCount.current);
     if (unprocessed.length === 0) return;
 
+    const timestamp = getElapsed(timerStartRef.current);
+
     unprocessed.forEach(msg => {
       try {
         const data = JSON.parse(msg);
-        const timestamp = new Date().toLocaleTimeString('en-US', {
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        });
         processMessage(data, timestamp);
       } catch (err) {
         console.error('Error parsing backend message:', err);
@@ -534,6 +563,7 @@ export default function AgentActivity({
           exploredPct={exploredPct}
           discoveredCells={discoveredCells}
           flashingCells={flashingCells}
+          elapsedTime={elapsedTime}
           onClose={() => setIsFullscreenMaze(false)}
         />
       )}
