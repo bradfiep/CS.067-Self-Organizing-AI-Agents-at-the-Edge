@@ -649,24 +649,24 @@ class Node:
         return 0
 
 
-    def get_agent_stats(self, goal: Tuple[int, int], maze: List[List[int]]) -> Dict:
+    def get_agent_stats(self, goal: Tuple[int, int], maze: List[List[int]], all_explored: set) -> Dict:
         """
         Gather all agent statistics for display at maze completion.
         
         Args:
             goal: The maze end position (row, col) — same for all agents.
             maze: The full 2D maze grid used to compute remaining frontiers.
+            all_explored: Union of all agents' explored tiles.
         
         Returns:
             Dictionary containing all relevant stats for this agent.
         """
         total_explored = len(self.local_map)
-        # Count truly unexplored open cells from the real maze (not the stale frontier worklist)
-        total_open = sum(
+        # Count truly unexplored open cells using the combined explored set across all agents
+        remaining_frontiers = sum(
             1 for r in range(len(maze)) for c in range(len(maze[0]))
-            if maze[r][c] == 0 and (r, c) not in self.local_map
+            if maze[r][c] == 0 and (r, c) not in all_explored
         )
-        remaining_frontiers = total_open
         self_claimed_frontiers = len([f for f in self.claimed_frontiers if self.claimed_frontiers[f] == self.agent_id])
 
         # Unique positions this agent physically walked through (differs per agent)

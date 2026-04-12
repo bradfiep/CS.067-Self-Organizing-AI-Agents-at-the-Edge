@@ -171,7 +171,7 @@ async def run_live_simulation(maze, start, end, websocket):
     goal_tuple = tuple(end)
     agent_stats = []
     for agent in agents:
-        stats = agent.get_agent_stats(goal_tuple, maze)
+        stats = agent.get_agent_stats(goal_tuple, maze, explored)
         agent_stats.append(stats)
 
     await websocket.send(json.dumps({
