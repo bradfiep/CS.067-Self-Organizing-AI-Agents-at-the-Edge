@@ -116,6 +116,9 @@ async def run_live_simulation(maze, start, end, websocket):
             # Check if anyone found the end
             if agent.current_position == tuple(end):
                 goal_reached = True
+                if not agent.reached_goal:
+                    agent.reached_goal = True
+                    agent.goal_tick = tick
                 # Send log to frontend activity page
                 await websocket.send(json.dumps({
                     "type": "agent_goal_reached",
@@ -164,13 +167,21 @@ async def run_live_simulation(maze, start, end, websocket):
     total_open = sum(1 for row in maze for cell in row if cell == 0)
     explored_pct = (len(explored) / total_open * 100) if total_open > 0 else 0
 
+    # Collect stats for all agents
+    goal_tuple = tuple(end)
+    agent_stats = []
+    for agent in agents:
+        stats = agent.get_agent_stats(goal_tuple, maze, explored)
+        agent_stats.append(stats)
+
     await websocket.send(json.dumps({
         "type": "simulation_complete",
         "goal_reached": goal_reached,
         "tick": tick,
         "explored_cells": len(explored),
         "total_cells": total_open,
-        "explored_pct": round(explored_pct, 1)
+        "explored_pct": round(explored_pct, 1),
+        "agent_stats": agent_stats
     }))
 
 # -------------------------
