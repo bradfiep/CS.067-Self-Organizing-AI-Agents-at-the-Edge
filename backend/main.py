@@ -167,9 +167,9 @@ async def run_live_simulation(maze, start, end, websocket):
     total_open = sum(1 for row in maze for cell in row if cell == 0)
     explored_pct = (len(explored) / total_open * 100) if total_open > 0 else 0
 
-    # Collect stats for all agents — pass full maze so BFS runs on actual maze, not explored tiles
-    agent_stats = []
+    # Collect stats for all agents
     goal_tuple = tuple(end)
+    agent_stats = []
     for agent in agents:
         stats = agent.get_agent_stats(goal_tuple, maze)
         agent_stats.append(stats)

@@ -647,18 +647,7 @@ class Node:
         
         # No path exists in maze (shouldn't happen in valid maze)
         return 0
-    
-    def _calculate_path_optimality(self, optimal_distance: int) -> float:
-        """
-        Calculate path optimality ratio (actual steps / optimal steps to goal).
-        
-        Returns:
-            Ratio > 1.0 indicates inefficiency (took more steps than necessary).
-            1.0 = perfect efficiency.
-        """
-        if optimal_distance == 0:
-            return 1.0
-        return round(self.num_steps / optimal_distance, 2)
+
 
     def get_agent_stats(self, goal: Tuple[int, int], maze: List[List[int]]) -> Dict:
         """
@@ -666,7 +655,7 @@ class Node:
         
         Args:
             goal: The maze end position (row, col) — same for all agents.
-            maze: The full 2D maze grid used to compute true optimal path.
+            maze: The full 2D maze grid used to compute remaining frontiers.
         
         Returns:
             Dictionary containing all relevant stats for this agent.
@@ -679,13 +668,11 @@ class Node:
         )
         remaining_frontiers = total_open
         self_claimed_frontiers = len([f for f in self.claimed_frontiers if self.claimed_frontiers[f] == self.agent_id])
-        optimal_distance = self._calculate_optimal_path_distance(goal, maze)
-        path_optimality = self._calculate_path_optimality(optimal_distance)
 
         # Unique positions this agent physically walked through (differs per agent)
         unique_tiles_walked = len(set(self.agent_path))
         # Steps spent revisiting already-known tiles rather than exploring new ones
-        redundant_steps = self.num_steps - unique_tiles_walked
+        redundant_steps = max(0, self.num_steps - (unique_tiles_walked - 1))
         # New tiles discovered per step taken (higher = more efficient explorer)
         exploration_rate = round(self.tiles_discovered_directly / self.num_steps, 3) if self.num_steps > 0 else 0
         
@@ -698,9 +685,7 @@ class Node:
             "steps_taken": self.num_steps,
             "unique_tiles_walked": unique_tiles_walked,
             "redundant_steps": redundant_steps,
-            "optimal_path_distance": optimal_distance,
-            "path_optimality_ratio": path_optimality,
-            "efficiency_percentage": round((unique_tiles_walked / self.num_steps * 100) if self.num_steps > 0 else 0, 1),
+            "efficiency_percentage": round(((unique_tiles_walked - 1) / self.num_steps * 100) if self.num_steps > 0 else 0, 1),
             "exploration_rate": exploration_rate,
             "remaining_frontiers": remaining_frontiers,
             "frontiers_claimed_by_agent": self_claimed_frontiers,

@@ -1,34 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/StatsPopup.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-
-interface AgentStats {
-  agent_name: string;
-  agent_id: number;
-  tiles_explored: number;
-  tiles_discovered_directly: number;
-  tiles_learned_from_peers: number;
-  steps_taken: number;
-  unique_tiles_walked: number;
-  redundant_steps: number;
-  optimal_path_distance: number;
-  path_optimality_ratio: number;
-  efficiency_percentage: number;
-  exploration_rate: number;
-  remaining_frontiers: number;
-  frontiers_claimed_by_agent: number;
-  walls_boundaries_hit: number;
-  maps_merged_from_peers: number;
-  ticks_elapsed: number;
-  reached_goal: boolean;
-  goal_tick: number | null;
-}
+import type { AgentStats } from '../types/AgentStats';
 
 interface StatsPopupProps {
   isOpen: boolean;
   agents: AgentStats[];
   onClose: () => void;
 }
+
+const AGENT_COLORS = ['#297AEB', '#F28B1E', '#f8d32b', '#9718ad', '#e74337', '#1AB74E'];
+
+const getAgentColor = (agentId: number): string => {
+  return AGENT_COLORS[agentId % AGENT_COLORS.length];
+};
 
 const StatsPopup: React.FC<StatsPopupProps> = ({ isOpen, agents, onClose }) => {
   const [closing, setClosing] = useState(false);
@@ -46,6 +31,24 @@ const StatsPopup: React.FC<StatsPopupProps> = ({ isOpen, agents, onClose }) => {
   };
 
   if (!isOpen) return null;
+
+  if (agents.length === 0) {
+    return (
+      <div className={`stats-overlay${closing ? ' stats-overlay--closing' : ''}`}>
+        <div className={`stats-modal${closing ? ' stats-modal--closing' : ''}`}>
+          <div className="stats-header">
+            <h1>Maze Exploration Complete!</h1>
+          </div>
+          <div className="stats-scroll-body">
+            <p style={{ textAlign: 'center', padding: '2rem' }}>No agent data available.</p>
+          </div>
+          <div className="stats-footer">
+            <button className="close-button" onClick={handleClose}>Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const goalFinisher = agents.find(a => a.reached_goal) ?? null;
   const bestExplorer = agents.reduce((best, a) =>
@@ -68,7 +71,7 @@ const StatsPopup: React.FC<StatsPopupProps> = ({ isOpen, agents, onClose }) => {
             <div key={agent.agent_id} className="agent-stats-card">
               <div className="agent-stats-header">
                 <h2>{agent.agent_name}</h2>
-                <span className="agent-id">Agent #{agent.agent_id}</span>
+                <span className="agent-id" style={{ background: getAgentColor(agent.agent_id) }}>Agent #{agent.agent_id}</span>
               </div>
 
               <div className="stats-grid">
@@ -107,16 +110,6 @@ const StatsPopup: React.FC<StatsPopupProps> = ({ isOpen, agents, onClose }) => {
                   <div className="stat-row">
                     <span className="stat-label">Redundant Steps:</span>
                     <span className="stat-value">{agent.redundant_steps}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span className="stat-label">Optimal Path (BFS):</span>
-                    <span className="stat-value">{agent.optimal_path_distance}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span className="stat-label">Steps vs Optimal:</span>
-                    <span className="stat-value optimality-ratio">
-                      {agent.path_optimality_ratio}x
-                    </span>
                   </div>
                 </div>
 

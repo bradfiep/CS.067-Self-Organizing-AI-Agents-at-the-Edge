@@ -31,10 +31,6 @@
   to   { transform: translateY(2rem); opacity: 0; }
 }
 
-.stats-overlay--closing {
-  animation: fadeOutOverlay 0.3s ease-in forwards;
-}
-
 .stats-modal--closing {
   animation: slideDown 0.3s ease-in forwards;
 }
@@ -140,7 +136,6 @@
 }
 
 .agent-id {
-  background: #e86011;
   color: #000;
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
@@ -205,17 +200,9 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
-.stat-value.optimality-ratio {
-  color: #ff9800;
-}
-
 .stat-value.efficiency {
   color: #e86011;
   font-weight: 700;
-}
-
-.stat-value.efficiency:has-text-content('90') {
-  color: #e86011;
 }
 
 .stats-footer {
