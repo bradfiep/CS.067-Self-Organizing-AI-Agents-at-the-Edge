@@ -4,6 +4,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import Button from './Button';
 import MazeGrid from './MazeGrid';
 import FullscreenMaze from './FullscreenMaze';
+import StatsPopup from './StatsPopup';
 
 // Type definitions
 interface Agent {
@@ -23,6 +24,28 @@ interface ActivityLog {
   agentName: string;
   message: string;
   type: 'move' | 'info' | 'success' | 'error';
+}
+
+interface AgentStats {
+  agent_name: string;
+  agent_id: number;
+  tiles_explored: number;
+  tiles_discovered_directly: number;
+  tiles_learned_from_peers: number;
+  steps_taken: number;
+  unique_tiles_walked: number;
+  redundant_steps: number;
+  optimal_path_distance: number;
+  path_optimality_ratio: number;
+  efficiency_percentage: number;
+  exploration_rate: number;
+  remaining_frontiers: number;
+  frontiers_claimed_by_agent: number;
+  walls_boundaries_hit: number;
+  maps_merged_from_peers: number;
+  ticks_elapsed: number;
+  reached_goal: boolean;
+  goal_tick: number | null;
 }
 
 interface AgentActivityProps {
@@ -51,6 +74,7 @@ interface BackendMessage {
   explored_cells?: number;
   total_cells?: number;
   agents?: TickAgent[];
+  agent_stats?: AgentStats[];
 }
 
 interface TickAgent {
@@ -126,6 +150,10 @@ export default function AgentActivity({
   const [exploredPct, setExploredPct] = useState(0);
   const [discoveredCells, setDiscoveredCells] = useState<Set<string>>(new Set());
   const [flashingCells, setFlashingCells] = useState<Set<string>>(new Set());
+  const [showStats, setShowStats] = useState(false);
+  const [agentStats, setAgentStats] = useState<AgentStats[]>([]);
+  const [simulationStarted, setSimulationStarted] = useState(false);
+  const [simulationComplete, setSimulationComplete] = useState(false);
   const discoveredCellsRef = useRef<Set<string>>(new Set());
   const processedCount = useRef(0);
   const [elapsedTime, setElapsedTime] = useState('00:00.000');
@@ -226,44 +254,12 @@ export default function AgentActivity({
 
     else if (data.type === 'agent_frontier') {
       if (!data.agent_name || !data.frontier) return;
-      const cellKey = `${data.frontier[0]},${data.frontier[1]}`;
-      const isNewCell = !discoveredCellsRef.current.has(cellKey);
-      if (isNewCell) {
-        setDiscoveredCells(prev => {
-          const next = new Set(prev);
-          next.add(cellKey);
-          discoveredCellsRef.current = next;
-          return next;
-        });
-
-        setFlashingCells(prev => {
-          const next = new Set(prev);
-          next.add(cellKey);
-          return next;
-        });
-        setTimeout(() => {
-          setFlashingCells(prev => {
-            const next = new Set(prev);
-            next.delete(cellKey);
-            return next;
-          });
-        }, 500);
-      }
-      setAgents(prev => prev.map(agent => {
-        if (agent.name === data.agent_name && agent.status !== 'completed') {
-          if (isNewCell) {
-            return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: false, isHittingWall: false };
-          }
-          return { ...agent, status: 'exploring', position: data.frontier!, isDiscoveringCell: false };
-        }
-        return agent;
-      }));
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Exploring frontier ${formatCoordinate(data.frontier)}`,
+        message: `Targeting frontier ${formatCoordinate(data.frontier)}`,
         type: 'move'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -272,12 +268,7 @@ export default function AgentActivity({
     else if (data.type === 'agent_wall_hit') {
       if (!data.agent_name) return;
       const wallPos: [number, number] = data.wall_position || [0, 0];
-      let obstacleType = data.obstacle_type || 'wall';
-      if (obstacleType === 'block') {
-        obstacleType = 'wall';
-      } else if (obstacleType === 'wall') {
-        obstacleType = 'boundary';
-      }
+      const obstacleType = data.obstacle_type || 'wall';
       
       // Set agent to flashing red state
       setAgents(prev => prev.map(agent =>
@@ -344,6 +335,13 @@ export default function AgentActivity({
         setCurrentTick(ticks);
       }
       
+      // Store agent stats and show stats popup
+      setSimulationComplete(true);
+      if (data.agent_stats && data.agent_stats.length > 0) {
+        setAgentStats(data.agent_stats);
+        setShowStats(true);
+      }
+      
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
@@ -356,6 +354,7 @@ export default function AgentActivity({
     }
 
     else if (data.type === 'tick_update') {
+      setSimulationStarted(true);
       // Update current tick
       if (data.tick !== undefined) {
         setCurrentTick(data.tick);
@@ -366,18 +365,6 @@ export default function AgentActivity({
         setExploredPct(data.explored_pct);
       }
       
-      // Update discovered cells
-      if (Array.isArray(data.discovered_cell_positions)) {
-        // Keep this set monotonic to avoid regressions from delayed or partial tick payloads.
-        setDiscoveredCells(prev => {
-          const next = new Set(prev);
-          data.discovered_cell_positions!.forEach(cell => {
-            next.add(`${cell[0]},${cell[1]}`);
-          });
-          discoveredCellsRef.current = next;
-          return next;
-        });
-      }
       
       // Update agent positions from the tick update
       if (Array.isArray(data.agents)) {
@@ -419,6 +406,13 @@ export default function AgentActivity({
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
     }
   }, [assignAgentColor]);
+
+  // Reset processed count when messageQueue is cleared (e.g. Start Over)
+  useEffect(() => {
+    if (messageQueue.length === 0) {
+      processedCount.current = 0;
+    }
+  }, [messageQueue.length]);
 
   useEffect(() => {
     const unprocessed = messageQueue.slice(processedCount.current);
@@ -537,19 +531,51 @@ export default function AgentActivity({
           </div>
         </div>
 
-        {/* Back Button */}
-        <Button 
-          onClick={onBack}
-          style={{ 
-            position: 'absolute', 
-            top: '1.5rem', 
-            left: '2rem', 
-            zIndex: 20,
-            margin: 0
-          }}
-        >
-          Back
-        </Button>
+        {/* Back / Start Over Button */}
+        {!simulationStarted && (
+          <Button 
+            onClick={onBack}
+            style={{ 
+              position: 'absolute', 
+              top: '1.5rem', 
+              left: '2rem', 
+              zIndex: 20,
+              margin: 0
+            }}
+          >
+            Back
+          </Button>
+        )}
+        {simulationComplete && (
+          <Button 
+            onClick={onBack}
+            style={{ 
+              position: 'absolute', 
+              top: '1.5rem', 
+              left: '2rem', 
+              zIndex: 20,
+              margin: 0
+            }}
+          >
+            Start Over
+          </Button>
+        )}
+
+        {/* View Stats Button — only shown after simulation completes */}
+        {agentStats.length > 0 && (
+          <Button
+            onClick={() => setShowStats(true)}
+            style={{
+              position: 'absolute',
+              top: '1.5rem',
+              right: '2rem',
+              zIndex: 20,
+              margin: 0
+            }}
+          >
+            View Stats
+          </Button>
+        )}
       </div>
 
       {/* Fullscreen Maze Modal */}
@@ -567,6 +593,13 @@ export default function AgentActivity({
           onClose={() => setIsFullscreenMaze(false)}
         />
       )}
+
+      {/* Stats Popup Modal */}
+      <StatsPopup
+        isOpen={showStats}
+        agents={agentStats}
+        onClose={() => setShowStats(false)}
+      />
     </div>
   );
 }
