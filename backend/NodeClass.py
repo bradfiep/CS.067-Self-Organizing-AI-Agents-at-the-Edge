@@ -41,10 +41,19 @@ class Node:
         self.name = name
         self.agent_id = agent_id
         
+        self.PHEROMONE_INIT = 0.1 #starting pheromone val
+        self.PHEROMONE_DECAY = 0.05 #pheromone decay rate per tick
+        self.PHEREMONE_DEPOSIT = 1.0 #pheromone deposited on visited nodes
+        self.ALPHA = 1.0 #pheromone influence factor
+        self.BETA = 2.0 #distance influence factor
+
+
         # Core data structures
-        self.local_map: Dict[Tuple[int, int], Set[Tuple[int, int]]] = {}
+        # float will be our pheramone value
+        self.local_map: Dict[Tuple[int, int], Set[Tuple[int, int]], float] = {}
         self.frontiers: List[Tuple[int, int]] = []
         self.target_frontier: Optional[Tuple[int, int]] = None
+             
         # Map frontier coord -> agent_id that claimed it (lowest ID wins)
         self.claimed_frontiers: Dict[Tuple[int, int], int] = {}
         
