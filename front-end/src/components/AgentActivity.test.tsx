@@ -84,7 +84,7 @@ describe('AgentActivity Component', () => {
       });
 
       expect(screen.getByText('Status: exploring')).toBeInTheDocument();
-      expect(screen.getByText('Pos: (0,0)')).toBeInTheDocument();
+      expect(screen.getByText('Pos (col,row): (0,0)')).toBeInTheDocument();
     });
 
     it('should add agent registration to activity log', async () => {
@@ -97,7 +97,7 @@ describe('AgentActivity Component', () => {
       render(<AgentActivity {...getDefaultProps()} messageQueue={[msg]} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Agent registered at position \(1,2\)/)).toBeInTheDocument();
+        expect(screen.getByText(/Agent registered at position \(2,1\)/)).toBeInTheDocument();
       });
     });
 
@@ -224,7 +224,7 @@ describe('AgentActivity Component', () => {
       await waitFor(() => {
         const timeElement = document.querySelector('.activity-log-time');
         expect(timeElement).toBeInTheDocument();
-        expect(timeElement?.textContent).toMatch(/\d{2}:\d{2}:\d{2}/);
+        expect(timeElement?.textContent).toMatch(/\d{2}:\d{2}\.\d{3}/);
       });
     });
   });
@@ -323,7 +323,7 @@ describe('AgentActivity Component', () => {
       await waitFor(() => {
         expect(screen.getByText('TestAgent')).toBeInTheDocument();
         expect(screen.getByText('Status: completed')).toBeInTheDocument();
-        expect(screen.getByText('Pos: (2,1)')).toBeInTheDocument();
+        expect(screen.getByText('Pos (col,row): (1,2)')).toBeInTheDocument();
       });
     });
   });

@@ -6,6 +6,7 @@ interface Agent {
   position: [number, number];
   status: 'exploring' | 'inactive' | 'completed';
   color: string;
+  isHittingWall?: boolean;
 }
 
 interface FullscreenMazeProps {
@@ -15,6 +16,9 @@ interface FullscreenMazeProps {
   agents: Agent[];
   currentTick: number;
   exploredPct: number;
+  discoveredCells?: Set<string>;
+  flashingCells?: Set<string>;
+  elapsedTime?: string;
   onClose: () => void;
 }
 
@@ -30,6 +34,9 @@ export default function FullscreenMaze({
   agents,
   currentTick,
   exploredPct,
+  discoveredCells = new Set(),
+  flashingCells = new Set(),
+  elapsedTime = '00:00.000',
   onClose
 }: FullscreenMazeProps) {
   return (
@@ -137,11 +144,19 @@ export default function FullscreenMaze({
               background: 'rgba(255, 255, 255, 0.03)',
               borderRadius: '6px'
             }}>
+              <span>Time: <strong style={{ color: '#fff' }}>{elapsedTime}</strong></span>
               <span>Tick: <strong style={{ color: '#fff' }}>{currentTick}</strong></span>
               <span>Explored: <strong style={{ color: '#fff' }}>{exploredPct}%</strong></span>
             </div>
             <div style={{ maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto' }}>
-              <MazeGrid maze={maze} start={startPt} end={endPt} agents={agents} />
+              <MazeGrid
+                maze={maze}
+                start={startPt}
+                end={endPt}
+                agents={agents}
+                discoveredCells={discoveredCells}
+                flashingCells={flashingCells}
+              />
             </div>
           </div>
         )}

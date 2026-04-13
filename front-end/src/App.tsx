@@ -76,25 +76,6 @@ function App() {
     </div>
   );
 
-  // Show Agent Activity page
-  if (showActivity) {
-    return (
-      <>
-        <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
-        <AgentActivity
-          onBack={() => {
-            setShowActivity(false);
-            setShowBuilder(true);
-          }}
-          messageQueue={messageQueue}
-          maze={maze}
-          startPt={startPt}
-          endPt={endPt}
-        />
-      </>
-    );
-  }
-  
   // Handler to reset MazeBuilder state
   const resetMazeBuilderState = () => {
     setExportType('csv');
@@ -109,6 +90,28 @@ function App() {
     setError('');
   };
 
+  // Show Agent Activity page
+  if (showActivity) {
+    return (
+      <>
+        <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
+        <AgentActivity
+          onBack={() => {
+            resetMazeBuilderState();
+            setMessageQueue([]);
+            setShowActivity(false);
+            setShowBuilder(true);
+            setMessageQueue([]);
+          }}
+          messageQueue={messageQueue}
+          maze={maze}
+          startPt={startPt}
+          endPt={endPt}
+        />
+      </>
+    );
+  }
+  
   if (showBuilder) {
     // Render the Maze Builder interface
     return (
