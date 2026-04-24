@@ -105,6 +105,9 @@ def spawn_agents(maze: List[List[int]], start_position: Tuple[int, int]) -> List
     print(f"Maze size: {len(maze)} x {len(maze[0])} ({len(maze) * len(maze[0])} cells)")
     print(f"Calculated optimal agent count: {optimal_count}")
     
+    maze_height = len(maze)
+    maze_width = len(maze[0]) if maze else 0
+    
     agents = []
     base_port = 9000
     
@@ -112,7 +115,8 @@ def spawn_agents(maze: List[List[int]], start_position: Tuple[int, int]) -> List
     for i in range(optimal_count):
         try:
             port = find_available_port(base_port + i * 10)
-            new_agent = Node(port=port, name=f"Agent_{i}", agent_id=i)
+            new_agent = Node(port=port, name=f"Agent_{i}", agent_id=i, 
+                           maze_width=maze_width, maze_height=maze_height)
             new_agent.set_initial_position(start_position)
             agents.append(new_agent)
         except RuntimeError as e:

@@ -4,6 +4,8 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import Button from './Button';
 import MazeGrid from './MazeGrid';
 import FullscreenMaze from './FullscreenMaze';
+import StatsPopup from './StatsPopup';
+import type { AgentStats } from '../types/AgentStats';
 
 // Type definitions
 interface Agent {
@@ -12,6 +14,8 @@ interface Agent {
   position: [number, number];
   status: 'exploring' | 'inactive' | 'completed';
   color: string;
+  isHittingWall?: boolean;
+  isDiscoveringCell?: boolean;
 }
 
 interface ActivityLog {
@@ -39,13 +43,17 @@ interface BackendMessage {
   frontier?: [number, number];
   from_position?: [number, number];
   to_position?: [number, number];
+  wall_position?: [number, number];
+  obstacle_type?: string;
   status?: string;
   goal_reached?: boolean;
   explored_pct?: number;
+  discovered_cell_positions?: number[][];
   tick?: number;
   explored_cells?: number;
   total_cells?: number;
   agents?: TickAgent[];
+  agent_stats?: AgentStats[];
 }
 
 interface TickAgent {
@@ -68,7 +76,7 @@ function AgentListItem({ agent }: { agent: Agent }) {
         <div className="agent-name">{agent.name}</div>
         <div className="agent-details">
           <span>Status: {agent.status}</span>
-          <span>Pos: ({position[0]},{position[1]})</span>
+          <span>{`Pos (col,row): (${position[1]},${position[0]})`}</span>
         </div>
       </div>
     </div>
@@ -96,6 +104,16 @@ function ExpandIcon() {
   return <i className="bi bi-arrows-angle-expand" style={{ fontSize: '20px' }}></i>;
 }
 
+// For timestamp, converts a start timestamp into a MM:SS.ms elapsed string
+const getElapsed = (startTime: number | null): string => {
+  if (!startTime) return '00:00.000';
+  const elapsed = Date.now() - startTime;
+  const m = Math.floor(elapsed / 60000);
+  const s = Math.floor((elapsed % 60000) / 1000);
+  const ms = elapsed % 1000;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+};
+
 export default function AgentActivity({
   onBack,
   messageQueue,
@@ -109,7 +127,29 @@ export default function AgentActivity({
   const [isFullscreenMaze, setIsFullscreenMaze] = useState(false);
   const [currentTick, setCurrentTick] = useState(0);
   const [exploredPct, setExploredPct] = useState(0);
+  const [discoveredCells, setDiscoveredCells] = useState<Set<string>>(new Set());
+  const [flashingCells, setFlashingCells] = useState<Set<string>>(new Set());
+  const [showStats, setShowStats] = useState(false);
+  const [agentStats, setAgentStats] = useState<AgentStats[]>([]);
+  const [simulationStarted, setSimulationStarted] = useState(false);
+  const [simulationComplete, setSimulationComplete] = useState(false);
+  const discoveredCellsRef = useRef<Set<string>>(new Set());
   const processedCount = useRef(0);
+  const [elapsedTime, setElapsedTime] = useState('00:00.000');
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerStartRef = useRef<number | null>(null);
+
+  // Clear the interval on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, []);
+
+  // Internal coordinates are [row, col]; display as (x, y) => (col, row).
+  const formatCoordinate = (position: [number, number]): string => {
+    return `(${position[1]},${position[0]})`;
+  };
 
   const assignAgentColor = useCallback((agentName: string): string => {
     const colors = ['#297AEB', '#F28B1E', '#f8d32b', '#9718ad', '#e74337', '#1AB74E'];
@@ -138,7 +178,7 @@ export default function AgentActivity({
         timestamp,
         agentId: newAgent.id,
         agentName: data.agent_name,
-        message: `Agent registered at position (${data.position[0]},${data.position[1]})`,
+        message: `Agent registered at position ${formatCoordinate(data.position)}`,
         type: 'info'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -146,17 +186,46 @@ export default function AgentActivity({
 
     else if (data.type === 'agent_move') {
       if (!data.agent_name || !data.from_position || !data.to_position) return;
-      setAgents(prev => prev.map(agent =>
-        agent.name === data.agent_name
-          ? { ...agent, status: 'exploring', position: data.to_position! }
-          : agent
-      ));
+      const cellKey = `${data.to_position[0]},${data.to_position[1]}`;
+      const isNewCell = !discoveredCellsRef.current.has(cellKey);
+      if (isNewCell) {
+        // Mark discovered immediately so repeated visits do not retrigger discovery flash.
+        setDiscoveredCells(prev => {
+          const next = new Set(prev);
+          next.add(cellKey);
+          discoveredCellsRef.current = next;
+          return next;
+        });
+
+        // Trigger a short flash on the newly discovered cell.
+        setFlashingCells(prev => {
+          const next = new Set(prev);
+          next.add(cellKey);
+          return next;
+        });
+        setTimeout(() => {
+          setFlashingCells(prev => {
+            const next = new Set(prev);
+            next.delete(cellKey);
+            return next;
+          });
+        }, 500);
+      }
+      setAgents(prev => prev.map(agent => {
+        if (agent.name === data.agent_name) {
+          if (isNewCell) {
+            return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: false, isHittingWall: false };
+          }
+          return { ...agent, status: 'exploring', position: data.to_position!, isDiscoveringCell: false };
+        }
+        return agent;
+      }));
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Moving one step from (${data.from_position[0]},${data.from_position[1]}) to (${data.to_position[0]},${data.to_position[1]})`,
+        message: `Moving one step from ${formatCoordinate(data.from_position!)} to ${formatCoordinate(data.to_position!)}`,
         type: 'move'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
@@ -164,18 +233,45 @@ export default function AgentActivity({
 
     else if (data.type === 'agent_frontier') {
       if (!data.agent_name || !data.frontier) return;
-      setAgents(prev => prev.map(agent =>
-        agent.name === data.agent_name && agent.status !== 'completed'
-          ? { ...agent, status: 'exploring', position: data.frontier! }
-          : agent
-      ));
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Exploring frontier (${data.frontier[0]},${data.frontier[1]})`,
+        message: `Targeting frontier ${formatCoordinate(data.frontier)}`,
         type: 'move'
+      };
+      setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
+    }
+
+    else if (data.type === 'agent_wall_hit') {
+      if (!data.agent_name) return;
+      const wallPos: [number, number] = data.wall_position || [0, 0];
+      const obstacleType = data.obstacle_type || 'wall';
+      
+      // Set agent to flashing red state
+      setAgents(prev => prev.map(agent =>
+        agent.name === data.agent_name
+          ? { ...agent, isHittingWall: true }
+          : agent
+      ));
+      
+      // Reset flash after animation completes (600ms)
+      setTimeout(() => {
+        setAgents(prev => prev.map(agent =>
+          agent.name === data.agent_name
+            ? { ...agent, isHittingWall: false }
+            : agent
+        ));
+      }, 600);
+      
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        timestamp,
+        agentId: data.agent_name.toLowerCase().replace(' ', '-'),
+        agentName: data.agent_name,
+        message: `Hit ${obstacleType} at ${formatCoordinate(wallPos)}`,
+        type: 'error'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
     }
@@ -192,13 +288,20 @@ export default function AgentActivity({
         timestamp,
         agentId: data.agent_name.toLowerCase().replace(' ', '-'),
         agentName: data.agent_name,
-        message: `Reached goal (${data.position[0]},${data.position[1]}) ✓`,
+        message: `Reached goal ${formatCoordinate(data.position)} ✓`,
         type: 'success'
       };
       setActivityLogs(prev => [newLog, ...prev].slice(0, 50));
     }
 
     else if (data.type === 'simulation_complete') {
+      // Stop the timer and snap to the exact final elapsed time
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setElapsedTime(getElapsed(timerStartRef.current));
+
       const result = data.goal_reached ? 'Success ✓' : 'Failed ✗';
       const ticks = data.tick ?? 'unknown';
       const exploredCells = data.explored_cells ?? 0;
@@ -209,6 +312,13 @@ export default function AgentActivity({
       setExploredPct(explored);
       if (typeof ticks === 'number') {
         setCurrentTick(ticks);
+      }
+      
+      // Store agent stats and show stats popup
+      setSimulationComplete(true);
+      if (data.agent_stats && data.agent_stats.length > 0) {
+        setAgentStats(data.agent_stats);
+        setShowStats(true);
       }
       
       const newLog: ActivityLog = {
@@ -223,6 +333,7 @@ export default function AgentActivity({
     }
 
     else if (data.type === 'tick_update') {
+      setSimulationStarted(true);
       // Update current tick
       if (data.tick !== undefined) {
         setCurrentTick(data.tick);
@@ -232,6 +343,7 @@ export default function AgentActivity({
       if (data.explored_pct !== undefined) {
         setExploredPct(data.explored_pct);
       }
+      
       
       // Update agent positions from the tick update
       if (Array.isArray(data.agents)) {
@@ -256,6 +368,12 @@ export default function AgentActivity({
     }
 
     else if (data.type === 'ack') {
+      // Start the elapsed timer when the backend acknowledges the simulation
+      timerStartRef.current = Date.now();
+      timerIntervalRef.current = setInterval(() => {
+        setElapsedTime(getElapsed(timerStartRef.current));
+      }, 100);
+
       const newLog: ActivityLog = {
         id: `log-${Date.now()}-${Math.random()}`,
         timestamp,
@@ -268,19 +386,22 @@ export default function AgentActivity({
     }
   }, [assignAgentColor]);
 
+  // Reset processed count when messageQueue is cleared (e.g. Start Over)
+  useEffect(() => {
+    if (messageQueue.length === 0) {
+      processedCount.current = 0;
+    }
+  }, [messageQueue.length]);
+
   useEffect(() => {
     const unprocessed = messageQueue.slice(processedCount.current);
     if (unprocessed.length === 0) return;
 
+    const timestamp = getElapsed(timerStartRef.current);
+
     unprocessed.forEach(msg => {
       try {
         const data = JSON.parse(msg);
-        const timestamp = new Date().toLocaleTimeString('en-US', {
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        });
         processMessage(data, timestamp);
       } catch (err) {
         console.error('Error parsing backend message:', err);
@@ -316,7 +437,14 @@ export default function AgentActivity({
               <div className="activity-maze-preview">
                 {maze ? (
                   <>
-                    <MazeGrid maze={maze} start={startPt} end={endPt} agents={agents} />
+                    <MazeGrid
+                      maze={maze}
+                      start={startPt}
+                      end={endPt}
+                      agents={agents}
+                      discoveredCells={discoveredCells}
+                      flashingCells={flashingCells}
+                    />
                     <button
                       onClick={() => setIsFullscreenMaze(true)}
                       style={{
@@ -382,19 +510,51 @@ export default function AgentActivity({
           </div>
         </div>
 
-        {/* Back Button */}
-        <Button 
-          onClick={onBack}
-          style={{ 
-            position: 'absolute', 
-            top: '1.5rem', 
-            left: '2rem', 
-            zIndex: 20,
-            margin: 0
-          }}
-        >
-          Back
-        </Button>
+        {/* Back / Start Over Button */}
+        {!simulationStarted && (
+          <Button 
+            onClick={onBack}
+            style={{ 
+              position: 'absolute', 
+              top: '1.5rem', 
+              left: '2rem', 
+              zIndex: 20,
+              margin: 0
+            }}
+          >
+            Back
+          </Button>
+        )}
+        {simulationComplete && (
+          <Button 
+            onClick={onBack}
+            style={{ 
+              position: 'absolute', 
+              top: '1.5rem', 
+              left: '2rem', 
+              zIndex: 20,
+              margin: 0
+            }}
+          >
+            Start Over
+          </Button>
+        )}
+
+        {/* View Stats Button — only shown after simulation completes */}
+        {agentStats.length > 0 && (
+          <Button
+            onClick={() => setShowStats(true)}
+            style={{
+              position: 'absolute',
+              top: '1.5rem',
+              right: '2rem',
+              zIndex: 20,
+              margin: 0
+            }}
+          >
+            View Stats
+          </Button>
+        )}
       </div>
 
       {/* Fullscreen Maze Modal */}
@@ -406,9 +566,19 @@ export default function AgentActivity({
           agents={agents}
           currentTick={currentTick}
           exploredPct={exploredPct}
+          discoveredCells={discoveredCells}
+          flashingCells={flashingCells}
+          elapsedTime={elapsedTime}
           onClose={() => setIsFullscreenMaze(false)}
         />
       )}
+
+      {/* Stats Popup Modal */}
+      <StatsPopup
+        isOpen={showStats}
+        agents={agentStats}
+        onClose={() => setShowStats(false)}
+      />
     </div>
   );
 }

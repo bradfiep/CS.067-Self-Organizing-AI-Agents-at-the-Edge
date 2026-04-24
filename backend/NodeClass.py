@@ -28,7 +28,7 @@ class Node:
     - claimed_frontiers: Set of frontiers claimed by any agent
     """
     
-    def __init__(self, port: int, name: str, agent_id: int):
+    def __init__(self, port: int, name: str, agent_id: int, maze_width: int = 0, maze_height: int = 0):
         """
         Initialize a swarm agent.
         
@@ -36,10 +36,14 @@ class Node:
             port: UDP port for this agent
             name: Human-readable name
             agent_id: Unique numeric identifier
+            maze_width: Width of the maze (for boundary detection)
+            maze_height: Height of the maze (for boundary detection)
         """
         self.port = port
         self.name = name
         self.agent_id = agent_id
+        self.maze_width = maze_width
+        self.maze_height = maze_height
         
         self.PHEROMONE_INIT = 0.1 #starting pheromone val
         self.PHEROMONE_DECAY = 0.05 #pheromone decay rate per tick
@@ -73,11 +77,23 @@ class Node:
         
         # Stuck detection
         self.stuck_counter: int = 0
+        
+        # Wall hit tracking (to avoid spamming multiple hits at same location)
+        self.recent_wall_hits: Set[Tuple[int, int]] = set()
 
-        #the list to save agent's path and number
+        # the list to save agent's path and number
         self.agent_path = []
-        #the number of steps taken by each agent
+        # the number of steps taken by each agent
         self.num_steps = 0
+        
+        # Stats tracking for maze completion display
+        self.total_wall_hits: int = 0  # cumulative wall/boundary hits
+        self.tiles_discovered_directly: int = 0  # tiles discovered by this agent via scan
+        self.ticks_elapsed: int = 0  # number of tick() calls
+        self.maps_merged: int = 0  # number of merge packets processed
+        self.maze_complete: bool = False  # flag for when exploration finishes
+        self.reached_goal: bool = False  # whether this agent reached the goal
+        self.goal_tick: Optional[int] = None  # tick number when goal was reached
     
     def send_activity_log(self, log_type: str, extra_data: Optional[Dict] = None):
         """
@@ -101,12 +117,38 @@ class Node:
         except Exception as e:
             pass
 
+    def report_wall_hit(self, wall_position: Tuple[int, int]):
+        """
+        Report when an agent encounters a wall/blocked tile.
+        Differentiates between boundary walls and internal blocks.
+        
+        Args:
+            wall_position: The (x,y) position of the wall/blocked tile
+        """
+        # Coordinates are stored/used as (row, col) across tick/scan logic.
+        # Compare row against maze_height and col against maze_width.
+        row, col = wall_position
+        is_boundary = (
+            row == 0
+            or row == self.maze_height - 1
+            or col == 0
+            or col == self.maze_width - 1
+        )
+        obstacle_type = "boundary" if is_boundary else "wall"
+        
+        self.send_activity_log("agent_wall_hit", {
+            "position": list(self.current_position) if self.current_position else [0, 0],
+            "wall_position": list(wall_position),
+            "obstacle_type": obstacle_type
+        })
+
     def set_initial_position(self, position: Tuple[int, int]):
         """Set the agent's starting position and initialize local_map."""
         self.current_position = position
         self.local_map[position] = set()
         #get the initial position of the agent
         self.agent_path = [position]
+        self.tiles_discovered_directly = 1  # starting position counts as discovered
         print(f"{self.name} starting at {position}")
 
     def _manhattan_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
@@ -285,6 +327,7 @@ class Node:
     def _scan_neighbors(self, local_grid_view: List[List[int]]) -> List[Tuple[int, int]]:
         """
         Scan 4-neighbors in the local grid view and identify frontiers.
+        Also detects and reports wall hits.
         """
         if not self.current_position:
             return []
@@ -307,8 +350,16 @@ class Node:
             
             cell = local_grid_view[nx][ny]
             
-            # Skip walls
+            # Check if this is a wall
             if self._is_wall(cell):
+                # Report wall hit if we haven't recently reported this wall
+                if (nx, ny) not in self.recent_wall_hits:
+                    self.report_wall_hit((nx, ny))
+                    self.recent_wall_hits.add((nx, ny))
+                    self.total_wall_hits += 1  # Track cumulative wall hits
+                    # Clear old hits after a few ticks to allow re-reporting
+                    if len(self.recent_wall_hits) > 10:
+                        self.recent_wall_hits.clear()
                 continue
             
             # Check if this open space is a new frontier
@@ -386,6 +437,7 @@ class Node:
             if frontier_tuple not in self.frontiers:
                 self.frontiers.append(frontier_tuple)
         
+        self.maps_merged += 1  # Track merge packet count
         print(f"{self.name} merged data from {sender}: {len(payload.get('nodes', []))} nodes, {len(payload.get('frontiers', []))} frontiers")
     
     def _process_claim_packet(self, payload: Dict):
@@ -427,6 +479,8 @@ class Node:
         Args:
             local_grid_view: 2D array of the agent's surroundings (0=open, 1=wall)
         """
+        self.ticks_elapsed += 1  # Track tick count
+        
         # CLEANUP: Ensure current position is in local_map
         if self.current_position not in self.local_map:
             self.local_map[self.current_position] = set()
@@ -471,6 +525,9 @@ class Node:
         if self.target_frontier:
             new_pos = self._move_toward_target()
             if new_pos != self.current_position:
+                #store it for pheromones
+                old_pos = self.current_position
+                prev_pos = self.current_position
                 self.current_position = new_pos
 
                 #record the path and count steps
@@ -480,6 +537,13 @@ class Node:
                 # Ensure newly visited position is in local_map
                 if self.current_position not in self.local_map:
                     self.local_map[self.current_position] = set()
+                    self.tiles_discovered_directly += 1  # Count cells added to map by own walking
+
+                # Notify frontend of movement (triggers teal flash on new tiles)
+                self.send_activity_log("agent_move", {
+                    "from_position": list(prev_pos),
+                    "to_position": list(new_pos)
+                })
                 print(f"{self.name} moved to {new_pos}")
             else:
                 # Reached frontier or stuck
@@ -553,6 +617,95 @@ class Node:
                 f.write(f"{self.name}: {msg}\n")
         except Exception as e:
             print(f"{self.name} failed to save message: {e}")
+
+    def _calculate_optimal_path_distance(self, goal: Tuple[int, int], maze: List[List[int]]) -> int:
+        """
+        Calculate the true shortest path from start to goal using BFS on the full maze.
+        This is identical for all agents since the maze, start, and goal are shared.
+        
+        Args:
+            goal: The maze end position (row, col).
+            maze: The full 2D maze grid (0=open, 1=wall).
+        
+        Returns:
+            Minimum steps from start to goal through open tiles.
+            Returns 0 if no starting position is known.
+        """
+        if not self.agent_path:
+            return 0
+        
+        start_pos = self.agent_path[0]
+        rows = len(maze)
+        cols = len(maze[0]) if rows > 0 else 0
+        
+        # BFS on the full maze grid
+        queue = deque([(start_pos, 0)])
+        visited = {start_pos}
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        
+        while queue:
+            current, distance = queue.popleft()
+            
+            if current == goal:
+                return distance
+            
+            cx, cy = current
+            for dx, dy in directions:
+                nx, ny = cx + dx, cy + dy
+                if (nx, ny) not in visited and 0 <= nx < rows and 0 <= ny < cols and maze[nx][ny] == 0:
+                    visited.add((nx, ny))
+                    queue.append(((nx, ny), distance + 1))
+        
+        # No path exists in maze (shouldn't happen in valid maze)
+        return 0
+
+
+    def get_agent_stats(self, goal: Tuple[int, int], maze: List[List[int]], all_explored: set) -> Dict:
+        """
+        Gather all agent statistics for display at maze completion.
+        
+        Args:
+            goal: The maze end position (row, col) — same for all agents.
+            maze: The full 2D maze grid used to compute remaining frontiers.
+            all_explored: Union of all agents' explored tiles.
+        
+        Returns:
+            Dictionary containing all relevant stats for this agent.
+        """
+        total_explored = len(self.local_map)
+        # Count truly unexplored open cells using the combined explored set across all agents
+        remaining_frontiers = sum(
+            1 for r in range(len(maze)) for c in range(len(maze[0]))
+            if maze[r][c] == 0 and (r, c) not in all_explored
+        )
+        self_claimed_frontiers = len([f for f in self.claimed_frontiers if self.claimed_frontiers[f] == self.agent_id])
+
+        # Unique positions this agent physically walked through (differs per agent)
+        unique_tiles_walked = len(set(self.agent_path))
+        # Steps spent revisiting already-known tiles rather than exploring new ones
+        redundant_steps = max(0, self.num_steps - (unique_tiles_walked - 1))
+        # New tiles discovered per step taken (higher = more efficient explorer)
+        exploration_rate = round(self.tiles_discovered_directly / self.num_steps, 3) if self.num_steps > 0 else 0
+        
+        return {
+            "agent_name": self.name,
+            "agent_id": self.agent_id,
+            "tiles_explored": total_explored,
+            "tiles_discovered_directly": self.tiles_discovered_directly,
+            "tiles_learned_from_peers": total_explored - self.tiles_discovered_directly,
+            "steps_taken": self.num_steps,
+            "unique_tiles_walked": unique_tiles_walked,
+            "redundant_steps": redundant_steps,
+            "efficiency_percentage": round(((unique_tiles_walked - 1) / self.num_steps * 100) if self.num_steps > 0 else 0, 1),
+            "exploration_rate": exploration_rate,
+            "remaining_frontiers": remaining_frontiers,
+            "frontiers_claimed_by_agent": self_claimed_frontiers,
+            "walls_boundaries_hit": self.total_wall_hits,
+            "maps_merged_from_peers": self.maps_merged,
+            "ticks_elapsed": self.ticks_elapsed,
+            "reached_goal": self.reached_goal,
+            "goal_tick": self.goal_tick,
+        }
 
     #getters to be used for another class/file calls
     def get_agent_path(self):
