@@ -316,8 +316,6 @@ class Node:
                 if (nx, ny) not in self.frontiers:
                     self.frontiers.append((nx, ny))
                     new_frontiers.append((nx, ny))
-                #give the pheromones value of 0.1 to new discovered cells/neighbors
-                self.discover_edge(self.current_position, (nx, ny))
         
         return new_frontiers
     def _broadcast_map_update(self, new_nodes: List[Tuple[int, int]], new_frontiers: List[Tuple[int, int]]):
@@ -435,9 +433,6 @@ class Node:
         
         # CLEANUP: Remove explored positions from frontier list (zombie frontier fix)
         self.frontiers = [f for f in self.frontiers if f not in self.local_map]
-
-        #call decay to make each path to loose their value which helps to get rid of unnecessary and unpopular paths
-        self.decay_pheromones()
         
         # Check if target_frontier has been reached
         if self.target_frontier == self.current_position:
@@ -476,11 +471,7 @@ class Node:
         if self.target_frontier:
             new_pos = self._move_toward_target()
             if new_pos != self.current_position:
-                #store it for pheromones
-                old_pos = self.current_position
                 self.current_position = new_pos
-                #assigne the value of 1.0 to the path that agent walks on
-                self.deposit_pheromone(old_pos, new_pos)
 
                 #record the path and count steps
                 self.num_steps += 1
@@ -569,41 +560,3 @@ class Node:
 
     def get_agent_steps(self):
         return self.num_steps
-
-
-    '''Pheromones logic'''
-    def discover_edge(self, from_node: Tuple[int, int], to_node: Tuple[int, int]):
-        '''When agents sees new neighbor cell, it registers it and gives the cell pheromone initial value'''
-        #convert set to dict
-        if from_node not in self.local_map:
-            self.local_map[from_node] = {}
-        elif isinstance(self.local_map[from_node], set):
-            self.local_map[from_node] = {n: self.PHEROMONE_INIT for n in self.local_map[from_node]}
-        
-        if to_node not in self.local_map[from_node]:
-            self.local_map[from_node][to_node] = self.PHEROMONE_INIT
-
-        if to_node not in self.local_map:
-            self.local_map[to_node] = {}
-        elif isinstance(self.local_map[to_node], set):
-            self.local_map[to_node] = {n: self.PHEROMONE_INIT for n in self.local_map[to_node]}
-
-        if from_node not in self.local_map[to_node]:
-            self.local_map[to_node][from_node] = self.PHEROMONE_INIT
-
-    def deposit_pheromone(self, from_node: Tuple[int, int], to_node: Tuple[int, int]):
-        '''Is called when agent actually walks on the path to update the value in hashmap to 1.0 deposit value
-        More agents, more value'''
-        if from_node in self.local_map and to_node in self.local_map[from_node]:
-            self.local_map[from_node][to_node] += self.PHEREMONE_DEPOSIT
-            self.local_map[to_node][from_node] += self.PHEREMONE_DEPOSIT
-
-    def decay_pheromones(self):
-        ''''''
-        for node in self.local_map:
-            for neighbor in self.local_map[node]:
-                self.local_map[node][neighbor] *= (1 - self.PHEROMONE_DECAY)
-                self.local_map[node][neighbor] = max(
-                    self.local_map[node][neighbor],
-                    self.PHEROMONE_INIT
-                )
