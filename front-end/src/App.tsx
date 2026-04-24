@@ -124,7 +124,6 @@ function App() {
           }}
           onSendMaze={handleSendMaze}
           wsConnected={ws.current?.readyState === WebSocket.OPEN}
-          backendMessage={messageQueue[messageQueue.length - 1] ?? null}
           exportType={exportType}
           setExportType={setExportType}
           inputType={inputType}
