@@ -5,12 +5,16 @@ import Header from './components/Header';
 import Button from './components/Button';
 import MazeBuilder from './components/MazeBuilder';
 import AgentActivity from './components/AgentActivity';
+import About from './components/About';
 import mazeImg from './assets/maze.png';
+
+const GITHUB_REPO_URL = 'https://github.com/Kushp2022/CS.067-Self-Organizing-AI-Agents-at-the-Edge';
 
 function App() {
   // State management for the application
   const [showBuilder, setShowBuilder] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [messageQueue, setMessageQueue] = useState<string[]>([]);
 
   // MazeBuilder state lifted here
@@ -70,8 +74,13 @@ function App() {
   // Header actions component
   const header_actions = (
     <div>
-      <Button variant='secondary' onClick={() => alert('About Button clicked!')}>About</Button>
-      <Button variant='secondary' onClick={() => alert('Github Button clicked!')}>Github</Button>
+      <Button variant='secondary' onClick={() => setShowAbout(true)}>About</Button>
+      <Button
+        variant='secondary'
+        onClick={() => window.open(GITHUB_REPO_URL, '_blank', 'noopener,noreferrer')}
+      >
+        Github
+      </Button>
       <Button onClick={() => setShowBuilder(true)}>Start Maze</Button>
     </div>
   );
@@ -89,6 +98,16 @@ function App() {
     setEndPt([0, 0]);
     setError('');
   };
+
+  // Show About page
+  if (showAbout) {
+    return (
+      <>
+        <Header title="Multi-Agent Maze Solver" logoSrc={oregonLogo} actions={header_actions} />
+        <About onBack={() => setShowAbout(false)} />
+      </>
+    );
+  }
 
   // Show Agent Activity page
   if (showActivity) {
@@ -124,7 +143,6 @@ function App() {
           }}
           onSendMaze={handleSendMaze}
           wsConnected={ws.current?.readyState === WebSocket.OPEN}
-          backendMessage={messageQueue[messageQueue.length - 1] ?? null}
           exportType={exportType}
           setExportType={setExportType}
           inputType={inputType}
