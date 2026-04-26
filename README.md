@@ -72,18 +72,22 @@ Add a screenshot, GIF, or demo video later!!!
 ```bash
 git clone https://github.com/bradfiep/CS.067-Self-Organizing-AI-Agents-at-the-Edge
 cd CS.067-Self-Organizing-AI-Agents-at-the-Edge
+```
 
 Run frontend:
 ```bash
 cd front-end
 npm install
 npm run dev
+```
 
 Run backend:
 ```bash
 cd backend
 python main.py
+```
 
+### Team Information
 
 **Team Roster**
 
@@ -96,7 +100,7 @@ python main.py
 | Samuel Garcia-Lopez  | garcsamu@oregonstate.edu      |
 | Sarah Satchell       | satchels@oregonstate.edu      |
 
-## Questions & Feedback
+**Questions & Feedback**
 
 Discord: https://discord.gg/a6CdXFvq2P  
 
