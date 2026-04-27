@@ -47,7 +47,8 @@ Rather than explicitly programming a solution, this system allows behavior to em
 
 ## Demo
 
-<img width="1920" height="1032" alt="AntColonyDemo" src="https://github.com/user-attachments/assets/1471f7fd-48a0-4dcb-a062-a4a7bad42cc6" />
+<img width="1920" height="1032" alt="AntColonyDemo-1" src="https://github.com/user-attachments/assets/a0fc05d9-e104-4dca-9931-07def43ee3c1" />
+
 
 
 ---
