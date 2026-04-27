@@ -47,7 +47,8 @@ Rather than explicitly programming a solution, this system allows behavior to em
 
 ## Demo
 
-Add a screenshot, GIF, or demo video later!!!
+<img width="1920" height="1032" alt="AntColonyDemo" src="https://github.com/user-attachments/assets/1471f7fd-48a0-4dcb-a062-a4a7bad42cc6" />
+
 
 ---
 
